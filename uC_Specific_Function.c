@@ -25,7 +25,7 @@
 #include "NXP_UJA11XX_defines.h"
 #include "NXP_TJA1145FD_functions.h"          
 
-extern void InitScheduler(void);
+extern void InitScheduler(Byte CanTrcvIndex);
 
 /**
 * \brief SPI transmission routine
@@ -45,8 +45,9 @@ extern void InitScheduler(void);
 * \param type Type (write/read/interrupt) of the SPI access 
 * \return <b>NXP_UJA11XX_Error_Code_t</b> possible values: NXP_UJA11XX_ERROR_WRITE_FAIL = 0, NXP_UJA11XX_ERROR_READ_FAIL = 1, NXP_UJA11XX_ERROR_SPI_HW_FAIL = 2, NXP_UJA11XX_SUCCESS = 3
 */
-NXP_UJA11XX_Error_Code_t SPI_Send(Byte* data, NXP_UJA11XX_SPI_Msg_Length_t length, Byte mask, NXP_UJA11XX_Access_t type) {
+NXP_UJA11XX_Error_Code_t SPI_Send(Byte CanTrcvIndex, Byte* data, NXP_UJA11XX_SPI_Msg_Length_t length, Byte mask, NXP_UJA11XX_Access_t type) {
 
+	NXP_UJA11XX_Error_Code_t ret = NXP_UJA11XX_ERROR_SPI_HW_FAIL;
 	// Insert your microcontroller specific code here
 	// e.g.
 	// First SPI access:
@@ -73,7 +74,14 @@ NXP_UJA11XX_Error_Code_t SPI_Send(Byte* data, NXP_UJA11XX_SPI_Msg_Length_t lengt
 	// -- If address bytes of both SPI accesses are similar and the according interrupt bit(s) are cleared in 2nd SPI access data, SPI access was successful.
 	// -- Else SPI write access was not succesful and NXP_UJA11XX_ERROR_WRITE_FAIL is returned.
 
-	return 3;
+	if(CanTrcvIndex >= MAXTJA11XXNO)
+	{
+		// Nothing to do
+	}
+	else
+	{
+	}
+	return ret;
 }
 
 /**
@@ -86,7 +94,7 @@ NXP_UJA11XX_Error_Code_t SPI_Send(Byte* data, NXP_UJA11XX_SPI_Msg_Length_t lengt
 *	- Configure Serial Communication Interfaces for LIN communication
 *	- Configure internal Analog/Digital Converter (ADC)
 */
-void InitMicrocontroller(void){
+void InitMicrocontroller(Byte CanTrcvIndex){
 	// Insert your microcontroller specific code here
 	// e.g.
 	// Configure SPI with 16 Bit, MSB first, shifting on rising and sampling on falling edge
@@ -105,7 +113,7 @@ void InitMicrocontroller(void){
 *	- 1 = A Flash update is required
 *	- 0 = No Flash update request pending
 */
-Byte FlashProgramming(void){    
+Byte FlashProgramming(Byte CanTrcvIndex){    
 	// Insert your microcontroller specific code here
 	// e.g.
 	// Read dedicated register in Flash Memory Controller etc.
@@ -118,7 +126,7 @@ Byte FlashProgramming(void){
 * \todo implement this function with your microcontroller specific code
 *	- stop asm command 
 */
-void EnterMcuStopMode(void)
+void EnterMcuStopMode(Byte CanTrcvIndex)
 {
 	// Insert your microcontroller specific code here
 	// e.g. stop asm command
@@ -133,7 +141,7 @@ void EnterMcuStopMode(void)
 *	- 1 = All CAN transmission aborted
 *	- 0 = Abort of all CAN transmissions failed
 */
-Byte AbortTransmissionCAN(void){
+Byte AbortTransmissionCAN(Byte CanTrcvIndex){
 	// Insert your microcontroller specific code here
 
 	return 0;
@@ -147,7 +155,7 @@ Byte AbortTransmissionCAN(void){
 *	- 1 = CAN PE entered Stop Mode
 *	- 0 = CAN PE has not entered Stop Mode
 */
-Byte CANStopMode(void){
+Byte CANStopMode(Byte CanTrcvIndex){
 	// Insert your microcontroller specific code here
 	// e.g. Disable CAN PE  with wake-up disabled
 
@@ -162,7 +170,7 @@ Byte CANStopMode(void){
 *	- 1 = CAN PE entered Sleep Mode
 *	- 0 = CAN PE has not entered Sleep Mode
 */
-Byte CANSleepMode(void){
+Byte CANSleepMode(Byte CanTrcvIndex){
 	// Insert your microcontroller specific code here
 	// e.g. Disable CAN PE  with wake-up enabled
 
@@ -177,7 +185,7 @@ Byte CANSleepMode(void){
 *	- 1 = CAN PE is now able to transmit new messages
 *	- 0 = Enabling of transmissions failed
 */
-Byte EnableTransmissionCAN(void){
+Byte EnableTransmissionCAN(Byte CanTrcvIndex){
 	// Insert your microcontroller specific code here
 	// e.g. Enable CAN PE
 
@@ -192,10 +200,10 @@ Byte EnableTransmissionCAN(void){
 *	- Read GPIO port
 * \return Port input value
 */
-Byte ScanPort(void){
+Byte ScanPort(Byte CanTrcvIndex){
 	// Insert your microcontroller specific code here
 	// e.g. Read GPIO port and return value
-	return 1;
+	return 0xff;
 }
 
 /**
@@ -206,7 +214,7 @@ Byte ScanPort(void){
 *	- 1 = Timer disabled
 *	- 0 = Timer disable failed
 */
-Byte Scheduler_Disable(void){
+Byte Scheduler_Disable(Byte CanTrcvIndex){
 	// Insert your microcontroller specific code here
 	// e.g. disable global timer 
 
@@ -221,7 +229,7 @@ Byte Scheduler_Disable(void){
 *	- 1 = Timer enabled
 *	- 0 = Timer enable failed
 */
-Byte Scheduler_Enable(void){
+Byte Scheduler_Enable(Byte CanTrcvIndex){
 	// Insert your microcontroller specific code here
 
 	return 0;
@@ -234,7 +242,7 @@ Byte Scheduler_Enable(void){
 *	- 1 = RXD CAN is high
 *	- 0 = RXD CAN is low
 */
-Byte RXDC_GetValue(){
+Byte RXDC_GetValue(Byte CanTrcvIndex){
 	// Insert your microcontroller specific code here
 	// e.g. return value of port pin connected to UJA1164 RXD pin 
 	return 1;
@@ -248,7 +256,7 @@ Byte RXDC_GetValue(){
 *	- 1 = port pin is high (default): wait for start signal
 *	- 0 = port pin is low: start programming MTP
 */
-Byte MtpvnProgStart(void){
+Byte MtpvnProgStart(Byte CanTrcvIndex){
 	// Insert your microcontroller specific code here
 
 	return 1;
@@ -262,7 +270,7 @@ Byte MtpvnProgStart(void){
 *	- 1 = port pin is high (default): During MTP programming, SDMC = 0; During Normal Operation: "Normal" WD triggering requested
 *	- 0 = port pin is low: During MTP programming, SDMC = 1; During Normal Operation: "Debug" WD triggering requested (autonomous mode) 
 */
-Byte WdEmulation(void){
+Byte WdEmulation(Byte CanTrcvIndex){
 	// Insert your microcontroller specific code here
 
 	return 1;
@@ -273,7 +281,7 @@ Byte WdEmulation(void){
 * \brief Set Port Pin on high level used for control a LED that shows, if SBC is in Normal Mode or not 
 * \todo implement this function with your microcontroller specific code
 */
-void SetNormalModeLed(void) {
+void SetNormalModeLed(Byte CanTrcvIndex) {
 	// Insert your microcontroller specific code here
 
 }
@@ -283,7 +291,7 @@ void SetNormalModeLed(void) {
 * \brief Set Port Pin on low level used for control a LED that shows, if SBC is in Normal Mode or not 
 * \todo implement this function with your microcontroller specific code
 */
-void ClearNormalModeLed(void) {
+void ClearNormalModeLed(Byte CanTrcvIndex) {
 	// Insert your microcontroller specific code here
 
 }
@@ -293,7 +301,7 @@ void ClearNormalModeLed(void) {
 * \brief Toggle Port Pin used for signalling a Watchdog trigger
 * \todo implement this function with your microcontroller specific code
 */
-void ToggleWdTriggerLed(void) {
+void ToggleWdTriggerLed(Byte CanTrcvIndex) {
 	// Insert your microcontroller specific code here
 
 }

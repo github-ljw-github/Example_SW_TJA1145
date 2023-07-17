@@ -41,54 +41,54 @@
 #define __DI() {}    
 
 // see uC_Specific_Functions.c for documentation
-NXP_UJA11XX_Error_Code_t SPI_Send(Byte* data, NXP_UJA11XX_SPI_Msg_Length_t length, Byte mask ,NXP_UJA11XX_Access_t type);
+NXP_UJA11XX_Error_Code_t SPI_Send(Byte CanTrcvIndex, Byte* data, NXP_UJA11XX_SPI_Msg_Length_t length, Byte mask ,NXP_UJA11XX_Access_t type);
 
 // see uC_Specific_Functions.c for documentation
-void InitMicrocontroller(void); 
+void InitMicrocontroller(Byte CanTrcvIndex); 
 
 // see uC_Specific_Functions.c for documentation
-void EnterMcuStopMode(void);
+void EnterMcuStopMode(Byte CanTrcvIndex);
 
 // see uC_Specific_Functions.c for documentation
-Byte FlashProgramming(void);   
+Byte FlashProgramming(Byte CanTrcvIndex);   
 
 // see uC_Specific_Functions.c for documentation
-Byte AbortTransmissionCAN(void);
+Byte AbortTransmissionCAN(Byte CanTrcvIndex);
 
 // see uC_Specific_Functions.c for documentation
-Byte CANStopMode(void);
+Byte CANStopMode(Byte CanTrcvIndex);
 
 // see uC_Specific_Functions.c for documentation
-Byte CANSleepMode(void);
+Byte CANSleepMode(Byte CanTrcvIndex);
 
 // see uC_Specific_Functions.c for documentation
-Byte EnableTransmissionCAN(void);
+Byte EnableTransmissionCAN(Byte CanTrcvIndex);
 
 // see uC_Specific_Functions.c for documentation
-Byte ScanPort(void);
+Byte ScanPort(Byte CanTrcvIndex);
 
 // see uC_Specific_Functions.c for documentation
-Byte Scheduler_Disable(void);
+Byte Scheduler_Disable(Byte CanTrcvIndex);
 
 // see uC_Specific_Functions.c for documentation
-Byte Scheduler_Enable(void);
+Byte Scheduler_Enable(Byte CanTrcvIndex);
 
 // see uC_Specific_Functions.c for documentation
-Byte RXDC_GetValue(void);
+Byte RXDC_GetValue(Byte CanTrcvIndex);
 
 // see uC_Specific_Functions.c for documentation
-Byte MtpvnProgStart(void);
+Byte MtpvnProgStart(Byte CanTrcvIndex);
 
 // see uC_Specific_Functions.c for documentation
-Byte WdEmulation(void);   
+Byte WdEmulation(Byte CanTrcvIndex);   
 
 // see uC_Specific_Functions.c for documentation
-void SetNormalModeLed(void);
+void SetNormalModeLed(Byte CanTrcvIndex);
 
 // see uC_Specific_Functions.c for documentation
-void ClearNormalModeLed(void);
+void ClearNormalModeLed(Byte CanTrcvIndex);
 
 // see uC_Specific_Functions.c for documentation
-void ToggleWdTriggerLed(void);
+void ToggleWdTriggerLed(Byte CanTrcvIndex);
 
 #endif

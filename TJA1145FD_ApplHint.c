@@ -49,57 +49,57 @@
 *   - 0 No event pending
 *   - 1 Event pending
 */
-volatile bool PendingEvent;
+volatile bool TJA1145FD_PendingEvent[MAXTJA11XXNO];
 
 /// This variable indicates if a check of the transceiver status is required
 /**
 *   - 0 everything fine
 *   - 1 check of transceiver status required
 */
-volatile Byte CheckTrcvStatus;
+volatile Byte TJA1145FD_CheckTrcvStatus[MAXTJA11XXNO];
 
 /// This is the data structure/scheduler for requested application tasks
 /** 
 * CHANGE_TO_SLEEP, CHANGE_TO_STANDBY, CHANGE_TO_NORMAL, EVENT_HANDLING, TRIGGER_WATCHDOG,
 *	POLL_TRCV_STATUS, PORT_SUPERVISION can be scheduled
 */
-PendingTask_t ApplTask[MAXTASKNO];
+PendingTask_t TJA1145FD_ApplTask[MAXTJA11XXNO][MAXTASKNO];
 
 /// This variable indicates the write pointer variable of application task queue
-volatile int ApplTaskPt_write;
+volatile int TJA1145FD_ApplTaskPt_write[MAXTJA11XXNO];
 
 /// This variable indicates the read pointer variable of application task queue
-volatile int ApplTaskPt_read;
+volatile int TJA1145FD_ApplTaskPt_read[MAXTJA11XXNO];
 
 /// This is the data strcuture storing the failure entries
-enum FailureEntries FailureMemory[MAXERRENTR];
+enum FailureEntries TJA1145FD_FailureMemory[MAXTJA11XXNO][MAXERRENTR];
 
 /// This variable indicates the write pointer variable of failure memory
-volatile int FailMemPt_write;
+volatile int TJA1145FD_FailMemPt_write[MAXTJA11XXNO];
 
 /// The variable indicates the device type	
 /**
 * NXP_TJA1145 = 1, NXP_TJA1145FD = 2, NXP_UJA1164 = 3, NXP_UJA1167 = 4, NXP_UJA1167VX = 5, NXP_UJA1168 = 6,
 * NXP_UJA1168FD = 7, NXP_UJA1168FDVX = 8, NXP_UJA1168VX = 9, NXP_UNKNOWN = 0,  
 */ 
-volatile Device_t DeviceType;
+volatile Device_t TJA1145FD_DeviceType[MAXTJA11XXNO];
 
 /// Global timer overflow counter variable. Increases every 1ms. Counts up to 3 and starts from the beginning
-volatile int OverflowCnt;
+volatile int TJA1145FD_OverflowCnt[MAXTJA11XXNO];
 
 /// This variable indicates, if the Startup operation has been finished
 /** 
 *   - FALSE Startup Operation not finished
 *   - TRUE Startup operation finished
 */
-volatile bool StartupReady;
+volatile bool TJA1145FD_StartupReady[MAXTJA11XXNO];
 
 /// Reason for last wake-up
 /**
 * CANTRCV_WU_BY_BUS = 0, CANTRCV_WU_BY_PIN = 1, CANTRCV_WU_ERROR = 2, CANTRCV_WU_INTERNALLY = 3, CANTRCV_WU_NOT_SUPPORTED = 4,
 *	CANTRCV_WU_POWER_ON = 5, CANTRCV_WU_RESET = 6, CANTRCV_WU_BY_SYSERR = 7
 */
-volatile CanTrcv_TrcvWakeupReasonType WuReason;
+volatile CanTrcv_TrcvWakeupReasonType TJA1145FD_WuReason[MAXTJA11XXNO];
 
 
 /// TJA1145 Main Function - Entry point of the application
@@ -119,13 +119,14 @@ volatile CanTrcv_TrcvWakeupReasonType WuReason;
 * \version	1.0 
 * \date		2013/06/05
 */
-void main(){
+int main(){
 	/* Write your local variable definition here */
 	StdReturn_t ret; 
 	PendingTask_t task;
+	Byte CanTrcvIndex = 0;
 
 	// Operation set-up   
-	ret = StartupOperation(); 
+	ret = StartupOperation(CanTrcvIndex); 
 
 	if (ret == E_OK) {
 		// Default Application Mode
@@ -133,43 +134,43 @@ void main(){
 		while (TRUE) {
 
 			// If en event has occured in Low Power Mode, this is handled immediately
-			if (PendingEvent == TRUE){
-				PendingEvent = FALSE;
-				(void) RxdLowHandling();
+			if (TJA1145FD_PendingEvent[CanTrcvIndex] == TRUE){
+				TJA1145FD_PendingEvent[CanTrcvIndex] = FALSE;
+				(void) RxdLowHandling(CanTrcvIndex);
 			}
 
-			task = GetNextTask();    	  
+			task = GetNextTask(CanTrcvIndex);    	  
 			switch (task){      
 			case CHANGE_TO_SLEEP:
-				(void) ChangeToSleepOperation();
+				(void) ChangeToSleepOperation(CanTrcvIndex);
 				break;     
 
 			case CHANGE_TO_STANDBY:
-				(void) ChangeToStandbyOperation();
+				(void) ChangeToStandbyOperation(CanTrcvIndex);
 				break;  
 
 			case CHANGE_TO_NORMAL:
-				(void) ChangeToNormalOperation();
+				(void) ChangeToNormalOperation(CanTrcvIndex);
 				break;
 
 			case EVENT_HANDLING:
-				(void) EventHandling();				
+				(void) EventHandling(CanTrcvIndex);				
 				break;
 
 			case POLL_TRCV_STATUS:
-				(void) PollTransceiverStatus();
+				(void) PollTransceiverStatus(CanTrcvIndex);
 				break;
 
 			case PORT_SUPERVISION:
-				(void) PortSupervisor();
+				(void) PortSupervisor(CanTrcvIndex);
 				break;
 
 			case POLL_WAKE:
-				(void) WakeSupervisor();
+				(void) WakeSupervisor(CanTrcvIndex);
 				break;
 
 			case CFG_PARTIAL_NETWORKING:
-				(void) ConfigurePartialNetworking();
+				(void) ConfigurePartialNetworking(CanTrcvIndex);
 				break;		  
 
 			default:

@@ -31,6 +31,7 @@
 
 #define TRUE 1
 #define FALSE 0
+#define MAXTJA11XXNO 1
 
 //--------------------------------------------------------------------------------
 // general enumerations

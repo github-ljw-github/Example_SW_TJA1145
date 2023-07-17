@@ -28,17 +28,17 @@
 #include "TJA1145FD_Configuration.h"
 #include "uC_Specific_Functions.h"    
 
-extern volatile bool PendingEvent;
-extern volatile bool CheckTrcvStatus;
-extern PendingTask_t ApplTask[MAXTASKNO];
-extern volatile int ApplTaskPt_write;
-extern volatile int ApplTaskPt_read;
-extern enum FailureEntries FailureMemory[MAXERRENTR];
-extern volatile int FailMemPt_write;
-extern Device_t DeviceType;
-extern volatile CanTrcv_TrcvWakeupReasonType WuReason;
-extern int OverflowCnt;
-extern bool StartupReady;
+extern volatile bool TJA1145FD_PendingEvent[MAXTJA11XXNO];
+extern volatile bool TJA1145FD_CheckTrcvStatus[MAXTJA11XXNO];
+extern PendingTask_t TJA1145FD_ApplTask[MAXTJA11XXNO][MAXTASKNO];
+extern volatile int TJA1145FD_ApplTaskPt_write[MAXTJA11XXNO];
+extern volatile int TJA1145FD_ApplTaskPt_read[MAXTJA11XXNO];
+extern enum FailureEntries TJA1145FD_FailureMemory[MAXTJA11XXNO][MAXERRENTR];
+extern volatile int TJA1145FD_FailMemPt_write[MAXTJA11XXNO];
+extern Device_t TJA1145FD_DeviceType[MAXTJA11XXNO];
+extern volatile CanTrcv_TrcvWakeupReasonType TJA1145FD_WuReason[MAXTJA11XXNO];
+extern int TJA1145FD_OverflowCnt[MAXTJA11XXNO];
+extern bool TJA1145FD_StartupReady[MAXTJA11XXNO];
 
 /// Main Task
 /** This function is entered with every timer tick and starts different processes depending on
@@ -52,34 +52,32 @@ extern bool StartupReady;
 * \version  1.0
 * \date     2013/06/05
 */
-void SchedulerOnTimerOverflow (){     
-	Byte data = 0;
-	int i = 0; // to be deleted
+void SchedulerOnTimerOverflow (Byte CanTrcvIndex){     
 
-	OverflowCnt++; 
+	TJA1145FD_OverflowCnt[CanTrcvIndex]++; 
 
-	switch (OverflowCnt) {      
+	switch (TJA1145FD_OverflowCnt[CanTrcvIndex]) {      
 	case 1: // Event Status polling
-		AddTaskToScheduler(EVENT_HANDLING); 
+		AddTaskToScheduler(CanTrcvIndex, EVENT_HANDLING); 
 		break;
 
 	case 2: // Check TRCV status, if CAN failure has occured before
-		if (CheckTrcvStatus == TRUE){
-			CheckTrcvStatus = FALSE;
-			AddTaskToScheduler(POLL_TRCV_STATUS);
+		if (TJA1145FD_CheckTrcvStatus[CanTrcvIndex] == TRUE){
+			TJA1145FD_CheckTrcvStatus[CanTrcvIndex] = FALSE;
+			AddTaskToScheduler(CanTrcvIndex, POLL_TRCV_STATUS);
 		}
 		break;
 
 	case 3: // poll MCU pin status for request of mode change		  
-		AddTaskToScheduler(PORT_SUPERVISION); 
+		AddTaskToScheduler(CanTrcvIndex, PORT_SUPERVISION); 
 		break; 
 
 	case 4: // poll TJA1145 Wake Pin status		  
-		AddTaskToScheduler(POLL_WAKE);    
+		AddTaskToScheduler(CanTrcvIndex, POLL_WAKE);    
 		break; 
 
 	default:
-		OverflowCnt = 0; 		   
+		TJA1145FD_OverflowCnt[CanTrcvIndex] = 0; 		   
 		break;
 	}	     	
 }
@@ -94,15 +92,15 @@ void SchedulerOnTimerOverflow (){
 * \return	<b>Device_t</b> possible Values: NXP_TJA1145 = 1, NXP_TJA1145FD = 2, NXP_UJA1164 = 3, NXP_UJA1167 = 4, NXP_UJA1167VX = 5,
 *                           NXP_UJA1168 = 6, NXP_UJA1168FD = 7, NXP_UJA1168FDVX = 8, NXP_UJA1168VX = 9, NXP_UNKNOWN = 0,
 */
-Device_t GetDeviceType(){
+Device_t GetDeviceType(Byte CanTrcvIndex){
 	Device_t ret;
 	TJA1145FD_Device_ID_t ids;            	
 
 	// read Identification Register
-	(void) TJA1145FD_getIdentification(&ids);
+	(void) TJA1145FD_getIdentification(CanTrcvIndex, &ids);
 
 	// filter for IDS values  
-	switch (ids){
+	switch ((int)ids){
 
 	  case (0x70):
 		  ret = NXP_TJA1145;
@@ -154,21 +152,23 @@ Device_t GetDeviceType(){
 * \version	1.0
 * \date		2013/06/05
 */
-void InitApplication(void){
+void InitApplication(Byte CanTrcvIndex){
 	int i;
 
 	// Init global variables
-	InitScheduler();
-	FailMemPt_write = 0;
+	InitScheduler(CanTrcvIndex);
+	TJA1145FD_FailMemPt_write[CanTrcvIndex] = 0;
 	for(i = 0; i < MAXERRENTR; i++ ){
-		FailureMemory[i] = EMPTY;
+		TJA1145FD_FailureMemory[CanTrcvIndex][i] = EMPTY;
 	}
-	DeviceType = 0;
-	PendingEvent = FALSE;
-	OverflowCnt = 0;
-	CheckTrcvStatus = FALSE;
-	StartupReady = FALSE;
-	WuReason = CANTRCV_WU_RESET;
+        for(i = 0; i < MAXTJA11XXNO; i++){
+		TJA1145FD_DeviceType[i] = NXP_UNKNOWN;
+		TJA1145FD_PendingEvent[i] = FALSE;
+		TJA1145FD_CheckTrcvStatus[i] = FALSE;
+		TJA1145FD_StartupReady[i] = FALSE;
+		TJA1145FD_WuReason[i] = CANTRCV_WU_RESET;
+		TJA1145FD_OverflowCnt[i] = 0;
+	}
 }
 
 
@@ -187,47 +187,47 @@ void InitApplication(void){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */  
-StdReturn_t StartupOperation(void){
+StdReturn_t StartupOperation(Byte CanTrcvIndex){
 	StdReturn_t ret = E_OK;
 	Byte result;          		
 
 	// Initialize MCU (CAN PE, UART etc.)
-	(void) InitMicrocontroller(); 
+	(void) InitMicrocontroller(CanTrcvIndex); 
 
 	// Initialize general application variables
-	(void) InitApplication(); 
+	(void) InitApplication(CanTrcvIndex); 
 
 	// Get Device ID
-	DeviceType =	GetDeviceType();
+	TJA1145FD_DeviceType[CanTrcvIndex] =	GetDeviceType(CanTrcvIndex);
 
-	if (DeviceType == NXP_TJA1145FD){           	  
+	if (TJA1145FD_DeviceType[CanTrcvIndex] == NXP_TJA1145FD){           	  
 
 		// Check, if flash reprogramming is requested
-		result = FlashProgramming();
+		result = FlashProgramming(CanTrcvIndex);
 
 		if (result == 0) {              
 			// No flash reprogramming is requested
 
 			// Check FSMS setting
-			if (CheckFsmStatus() == E_NOT_OK){
+			if (CheckFsmStatus(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 
 			// Event Handling
-			if (EventHandling() == E_NOT_OK){
+			if (EventHandling(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 
 			// Change to Normal Operation
-			if (ChangeToNormalOperation() == E_NOT_OK){
+			if (ChangeToNormalOperation(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 		}  else {
-			(void) EnterFlashOperation();
+			(void) EnterFlashOperation(CanTrcvIndex);
 		}     
 
 		if (ret == E_OK){
-			StartupReady = TRUE;  
+			TJA1145FD_StartupReady[CanTrcvIndex] = TRUE;  
 		}
 	} else {
 		ret = E_NOT_OK;
@@ -257,31 +257,29 @@ StdReturn_t StartupOperation(void){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t InitTJA1145() {
+StdReturn_t InitTJA1145(Byte CanTrcvIndex) {
 	StdReturn_t ret = E_OK;
-	NXP_UJA11XX_Error_Code_t result = NXP_UJA11XX_SUCCESS;
-
 	// Unlock the TJA1145 registers
-	(void) TJA1145FD_setLockControl(TJA1145FD_LK6C_SPI_WRITE_ACCESS_ENABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_ENABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_ENABLED_0X06_TO_0X09);
+	(void) TJA1145FD_setLockControl(CanTrcvIndex, TJA1145FD_LK6C_SPI_WRITE_ACCESS_ENABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_ENABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_ENABLED_0X06_TO_0X09);
 
 	// Primary Control Registers
-	(void) TJA1145FD_setSystemEventEnable(TJA1145FD_SYS_EVENT_EN_INIT.TJA1145FD_OTWE, TJA1145FD_SYS_EVENT_EN_INIT.TJA1145FD_SPIFE);
-	(void) TJA1145FD_setMemory0(TJA1145FD_GPM0_INIT);
-	(void) TJA1145FD_setMemory1(TJA1145FD_GPM1_INIT);
-	(void) TJA1145FD_setMemory2(TJA1145FD_GPM2_INIT);
-	(void) TJA1145FD_setMemory3(TJA1145FD_GPM3_INIT); 
+	(void) TJA1145FD_setSystemEventEnable(CanTrcvIndex, TJA1145FD_SYS_EVENT_EN_INIT.TJA1145FD_OTWE, TJA1145FD_SYS_EVENT_EN_INIT.TJA1145FD_SPIFE);
+	(void) TJA1145FD_setMemory0(CanTrcvIndex, TJA1145FD_GPM0_INIT);
+	(void) TJA1145FD_setMemory1(CanTrcvIndex, TJA1145FD_GPM1_INIT);
+	(void) TJA1145FD_setMemory2(CanTrcvIndex, TJA1145FD_GPM2_INIT);
+	(void) TJA1145FD_setMemory3(CanTrcvIndex, TJA1145FD_GPM3_INIT); 
 
 	// Transceiver Control and PN Register Group	
-	(void) TJA1145FD_setCANControl(TJA1145FD_CAN_CONTROL_INIT.TJA1145FD_CFDC, TJA1145FD_CAN_CONTROL_INIT.TJA1145FD_PNCOK, TJA1145FD_CAN_CONTROL_INIT.TJA1145FD_CPNC, TJA1145FD_CAN_CONTROL_INIT.TJA1145FD_CMC);
-	(void) ConfigurePartialNetworking();
+	(void) TJA1145FD_setCANControl(CanTrcvIndex, TJA1145FD_CAN_CONTROL_INIT.TJA1145FD_CFDC, TJA1145FD_CAN_CONTROL_INIT.TJA1145FD_PNCOK, TJA1145FD_CAN_CONTROL_INIT.TJA1145FD_CPNC, TJA1145FD_CAN_CONTROL_INIT.TJA1145FD_CMC);
+	(void) ConfigurePartialNetworking(CanTrcvIndex);
 
-	(void) TJA1145FD_setTransceiverEventEnable(TJA1145FD_TRX_EVENT_EN_INIT.TJA1145FD_CBSE, TJA1145FD_TRX_EVENT_EN_INIT.TJA1145FD_CFE, TJA1145FD_TRX_EVENT_EN_INIT.TJA1145FD_CWE);
+	(void) TJA1145FD_setTransceiverEventEnable(CanTrcvIndex, TJA1145FD_TRX_EVENT_EN_INIT.TJA1145FD_CBSE, TJA1145FD_TRX_EVENT_EN_INIT.TJA1145FD_CFE, TJA1145FD_TRX_EVENT_EN_INIT.TJA1145FD_CWE);
 
 	// Wake Pin Control Registers
-	(void) TJA1145FD_setWakePinEvent(TJA1145FD_WAKE_PIN_INIT.TJA1145FD_WPRE, TJA1145FD_WAKE_PIN_INIT.TJA1145FD_WPFE);       
+	(void) TJA1145FD_setWakePinEvent(CanTrcvIndex, (TJA1145FD_Rising_Wake_Pin_Event_t)TJA1145FD_WAKE_PIN_INIT.TJA1145FD_WPRE, (TJA1145FD_Falling_Wake_Pin_Event_t)TJA1145FD_WAKE_PIN_INIT.TJA1145FD_WPFE);
 
 	// Lock access to General Purpose Memories and Transceiver registers
-	(void) TJA1145FD_setLockControl(TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_DISABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
+	(void) TJA1145FD_setLockControl(CanTrcvIndex, TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_DISABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
 
 	return ret;
 }
@@ -299,13 +297,13 @@ StdReturn_t InitTJA1145() {
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t CheckFsmStatus() {
+StdReturn_t CheckFsmStatus(Byte CanTrcvIndex) {
 	StdReturn_t ret = E_OK;
 	TJA1145FD_Main_Status_Reg_t mainStatusReg;
 	TJA1145FD_Transceiver_Event_Enable_Reg_t trcvEvEn = TJA1145FD_TRX_EVENT_EN_STANDBY;
 	TJA1145FD_Wake_Pin_Enable_Reg_t wakeEvEn = TJA1145FD_WAKE_PIN_EN_STANDBY;
 
-	if (TJA1145FD_getMainStatus(&mainStatusReg.TJA1145FD_FSMS, &mainStatusReg.TJA1145FD_OTWS, &mainStatusReg.TJA1145FD_NMS) != NXP_UJA11XX_SUCCESS) {
+	if (TJA1145FD_getMainStatus(CanTrcvIndex, &mainStatusReg.TJA1145FD_FSMS, &mainStatusReg.TJA1145FD_OTWS, &mainStatusReg.TJA1145FD_NMS) != NXP_UJA11XX_SUCCESS) {
 		ret = E_NOT_OK;
 	}
 
@@ -313,14 +311,14 @@ StdReturn_t CheckFsmStatus() {
 	if (mainStatusReg.TJA1145FD_FSMS == TJA1145FD_FSMS_AN_UNDERVOLTAGE_ON_VCC_AND_OR_VIO_FORCED_A_TRANSITION_TO_SLEEP_MODE){
 		// Re-init bits according to Standby configuration
 		// CPNC is kept 0 --> is changed by entering Standby/Sleep Operation Mode out of Normal Operation in this application 
-		if (TJA1145FD_setWakePinEnable(wakeEvEn.TJA1145FD_WPRE, wakeEvEn.TJA1145FD_WPFE) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setWakePinEnable(CanTrcvIndex, wakeEvEn.TJA1145FD_WPRE, wakeEvEn.TJA1145FD_WPFE) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK;
 		} 
-		(void) TJA1145FD_setLockControl(TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_ENABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
-		if (TJA1145FD_setTransceiverEventEnable(trcvEvEn.TJA1145FD_CBSE, trcvEvEn.TJA1145FD_CFE, trcvEvEn.TJA1145FD_CWE) != NXP_UJA11XX_SUCCESS){
+		(void) TJA1145FD_setLockControl(CanTrcvIndex, TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_ENABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
+		if (TJA1145FD_setTransceiverEventEnable(CanTrcvIndex, trcvEvEn.TJA1145FD_CBSE, trcvEvEn.TJA1145FD_CFE, trcvEvEn.TJA1145FD_CWE) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK;
 		}  		
-		(void) TJA1145FD_setLockControl(TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_DISABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);  
+		(void) TJA1145FD_setLockControl(CanTrcvIndex, TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_DISABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);  
 	} 	
 	return ret;
 }
@@ -354,7 +352,7 @@ StdReturn_t CheckFsmStatus() {
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t ChangeToStandbyOperation(){
+StdReturn_t ChangeToStandbyOperation(Byte CanTrcvIndex){
 	StdReturn_t ret = E_OK;
 	TJA1145FD_System_Event_Enable_Reg_t sysEvEn = TJA1145FD_SYS_EVENT_EN_STANDBY; 
 	TJA1145FD_Transceiver_Event_Enable_Reg_t trcvEvEn = TJA1145FD_TRX_EVENT_EN_STANDBY;
@@ -363,7 +361,7 @@ StdReturn_t ChangeToStandbyOperation(){
 	TJA1145FD_Mode_Control_t mc_reg; 
 
 	// Read Mode Control Register
-	(void) TJA1145FD_getModeControlReg(&mc_reg); 
+	(void) TJA1145FD_getModeControlReg(CanTrcvIndex, &mc_reg); 
 
 	// If TJA1145 is not in Sleep Mode
 	if(mc_reg != TJA1145FD_MC_STANDBY_MODE) {
@@ -379,27 +377,27 @@ StdReturn_t ChangeToStandbyOperation(){
 		} else {  
 
 			// Stop CAN transmission
-			StopCAN_TX();
+			StopCAN_TX(CanTrcvIndex);
 
 			// Configure to be captured events in Standby Mode
-			if(TJA1145FD_setSystemEventEnable(sysEvEn.TJA1145FD_OTWE, sysEvEn.TJA1145FD_SPIFE) != NXP_UJA11XX_SUCCESS){		
+			if(TJA1145FD_setSystemEventEnable(CanTrcvIndex, sysEvEn.TJA1145FD_OTWE, sysEvEn.TJA1145FD_SPIFE) != NXP_UJA11XX_SUCCESS){		
 				ret = E_NOT_OK;
 			} 
-			if (TJA1145FD_setWakePinEnable(wakeEvEn.TJA1145FD_WPRE, wakeEvEn.TJA1145FD_WPFE) != NXP_UJA11XX_SUCCESS){
+			if (TJA1145FD_setWakePinEnable(CanTrcvIndex, wakeEvEn.TJA1145FD_WPRE, wakeEvEn.TJA1145FD_WPFE) != NXP_UJA11XX_SUCCESS){
 				ret = E_NOT_OK;
 			} 
-			(void) TJA1145FD_setLockControl(TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_ENABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
-			if (TJA1145FD_setTransceiverEventEnable(trcvEvEn.TJA1145FD_CBSE, trcvEvEn.TJA1145FD_CFE, trcvEvEn.TJA1145FD_CWE) != NXP_UJA11XX_SUCCESS){
+			(void) TJA1145FD_setLockControl(CanTrcvIndex, TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_ENABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
+			if (TJA1145FD_setTransceiverEventEnable(CanTrcvIndex, trcvEvEn.TJA1145FD_CBSE, trcvEvEn.TJA1145FD_CFE, trcvEvEn.TJA1145FD_CWE) != NXP_UJA11XX_SUCCESS){
 				ret = E_NOT_OK;
 			}  		
-			if (TJA1145_SetPNActivationState((CanTrcv_PNActivationType) TJA1145FD_CPNC_STANDBY) != E_OK){
+			if (TJA1145_SetPNActivationState(CanTrcvIndex, (CanTrcv_PNActivationType) TJA1145FD_CPNC_STANDBY) != E_OK){
 				ret = E_NOT_OK;
 			}
-			(void) TJA1145FD_setLockControl(TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_DISABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
+			(void) TJA1145FD_setLockControl(CanTrcvIndex, TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_DISABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
 
 
 			// If no interrupt is pending, enter TJA1145 Standby Mode
-			(void) TJA1145FD_getGlobalEventStatus(&pendingEvent.TJA1145FD_WPE, &pendingEvent.TJA1145FD_TRXE, &pendingEvent.TJA1145FD_SYSE);
+			(void) TJA1145FD_getGlobalEventStatus(CanTrcvIndex, &pendingEvent.TJA1145FD_WPE, &pendingEvent.TJA1145FD_TRXE, &pendingEvent.TJA1145FD_SYSE);
 			if((pendingEvent.TJA1145FD_WPE == TJA1145FD_WPE_NO_WAKE_PIN_EVENT) &&
 				(pendingEvent.TJA1145FD_TRXE == TJA1145FD_TRXE_NO_TRANSCEIVER_EVENT) &&
 				(pendingEvent.TJA1145FD_SYSE == TJA1145FD_SYSE_NO_SYSTEM_EVENT)){                             
@@ -408,58 +406,58 @@ StdReturn_t ChangeToStandbyOperation(){
 					// transceiver and CAN controller (source: Autosar R3.2 and higher)
 					if ((ret == E_OK) && (TJA1145FD_CPNC_STANDBY == TJA1145FD_CPNC_CAN_SELECTIVE_WAKEUP_ENABLE)){        
 						// dedicated request to clear the WUF flag
-						if (TJA1145_ClearTrcvWufFlag() == E_NOT_OK){
+						if (TJA1145_ClearTrcvWufFlag(CanTrcvIndex) == E_NOT_OK){
 							ret = E_NOT_OK;
 						}	
 						// Disable CAN PE; wake-up disabled
-						(void) CANStopMode();
+						(void) CANStopMode(CanTrcvIndex);
 						// Enter TJA1145 Standby Mode
-						if (TJA1145_SetOpMode(CANTRCV_TRCVMODE_STANDBY) == E_NOT_OK){
+						if (TJA1145_SetOpMode(CanTrcvIndex, CANTRCV_TRCVMODE_STANDBY) == E_NOT_OK){
 							ret = E_NOT_OK;
 						}	
 						// Disable CAN PE; wake-up enabled
-						(void) CANSleepMode();	
+						(void) CANSleepMode(CanTrcvIndex);	
 						// Check if WUF has occured meanwhile; If yes, wake up ECU again
-						if (TJA1145_CheckWakeFlag() == E_NOT_OK){
+						if (TJA1145_CheckWakeFlag(CanTrcvIndex) == E_NOT_OK){
 							ret = E_NOT_OK;
 						}
 					}    	  
 					// If partial networking is not activated in TJA1145 
 					else if ((ret == E_OK) && (TJA1145FD_CPNC_STANDBY == TJA1145FD_CPNC_CAN_SELECTIVE_WAKEUP_DISABLE)) {
 						// Disable CAN PE, activate wake-up
-						(void) CANStopMode();
-						(void) CANSleepMode();	
+						(void) CANStopMode(CanTrcvIndex);
+						(void) CANSleepMode(CanTrcvIndex);	
 						//  Enter TJA1145 Standby Mode
-						if (TJA1145_SetOpMode(CANTRCV_TRCVMODE_STANDBY) == E_NOT_OK){
+						if (TJA1145_SetOpMode(CanTrcvIndex, CANTRCV_TRCVMODE_STANDBY) == E_NOT_OK){
 							ret = E_NOT_OK;
 						}
 					}
 
 					// if CAN shutdown and entering Standby Mode was successful
 					if (ret == E_OK){ 
-						(void) ClearNormalModeLed();   
+						(void) ClearNormalModeLed(CanTrcvIndex);   
 
 						// Check if RXD is high
-						if (RXDC_GetValue() == 1){             
+						if (RXDC_GetValue(CanTrcvIndex) == 1){             
 							// Stop CPU
-							EnterMcuStopMode(); 
+							EnterMcuStopMode(CanTrcvIndex); 
 						} else {
 
 							// Enter Normal Operation Mode is scheduled
-							(void) AddTaskToScheduler(CHANGE_TO_NORMAL);
-							PendingEvent = TRUE;
+							(void) AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_NORMAL);
+							TJA1145FD_PendingEvent[CanTrcvIndex] = TRUE;
 							ret = E_NOT_OK;   
 						}
 					} else { 
 
 						// Enter Normal Operation Mode is scheduled
-						(void) AddTaskToScheduler(CHANGE_TO_NORMAL);
-						PendingEvent = TRUE;   	    		
+						(void) AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_NORMAL);
+						TJA1145FD_PendingEvent[CanTrcvIndex] = TRUE;   	    		
 					}   
 			} else {
 				// Enter Normal Operation Mode is scheduled
-				(void) AddTaskToScheduler(CHANGE_TO_NORMAL);
-				PendingEvent = TRUE;  
+				(void) AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_NORMAL);
+				TJA1145FD_PendingEvent[CanTrcvIndex] = TRUE;  
 			}
 		}
 	}
@@ -497,7 +495,7 @@ StdReturn_t ChangeToStandbyOperation(){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t ChangeToSleepOperation(){
+StdReturn_t ChangeToSleepOperation(Byte CanTrcvIndex){
 	StdReturn_t ret = E_OK;
 	TJA1145FD_System_Event_Enable_Reg_t sysEvEn = TJA1145FD_SYS_EVENT_EN_SLEEP; 
 	TJA1145FD_Transceiver_Event_Enable_Reg_t trcvEvEn = TJA1145FD_TRX_EVENT_EN_SLEEP;
@@ -507,7 +505,7 @@ StdReturn_t ChangeToSleepOperation(){
 	TJA1145FD_Mode_Control_t mc_reg; 
 
 	// Read Mode Control Register
-	(void) TJA1145FD_getModeControlReg(&mc_reg); 
+	(void) TJA1145FD_getModeControlReg(CanTrcvIndex, &mc_reg); 
 
 	// If TJA1145 is not in Sleep Mode
 	if(mc_reg != TJA1145FD_MC_SLEEP_MODE) {
@@ -522,32 +520,32 @@ StdReturn_t ChangeToSleepOperation(){
 		} else {    
 
 			// Read Mode Control Register
-			(void) TJA1145_GetOpMode(&pMode);  
+			(void) TJA1145_GetOpMode(CanTrcvIndex, &pMode);  
 			if(pMode == CANTRCV_TRCVMODE_NORMAL){     
 				// Stop CAN transmission
-				StopCAN_TX();     	
+				StopCAN_TX(CanTrcvIndex);     	
 			}     
 
 			// Configure to be captured events in Sleep Mode
-			if(TJA1145FD_setSystemEventEnable(sysEvEn.TJA1145FD_OTWE, sysEvEn.TJA1145FD_SPIFE) != NXP_UJA11XX_SUCCESS){
+			if(TJA1145FD_setSystemEventEnable(CanTrcvIndex, sysEvEn.TJA1145FD_OTWE, sysEvEn.TJA1145FD_SPIFE) != NXP_UJA11XX_SUCCESS){
 				ret = E_NOT_OK;
 			}
-			if (TJA1145FD_setWakePinEnable(wakeEvEn.TJA1145FD_WPRE, wakeEvEn.TJA1145FD_WPFE) != NXP_UJA11XX_SUCCESS){
+			if (TJA1145FD_setWakePinEnable(CanTrcvIndex, wakeEvEn.TJA1145FD_WPRE, wakeEvEn.TJA1145FD_WPFE) != NXP_UJA11XX_SUCCESS){
 				ret = E_NOT_OK;
 			}  	
 
-			(void) TJA1145FD_setLockControl(TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_ENABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
-			if (TJA1145FD_setTransceiverEventEnable(trcvEvEn.TJA1145FD_CBSE, trcvEvEn.TJA1145FD_CFE, trcvEvEn.TJA1145FD_CWE) != NXP_UJA11XX_SUCCESS){
+			(void) TJA1145FD_setLockControl(CanTrcvIndex, TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_ENABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
+			if (TJA1145FD_setTransceiverEventEnable(CanTrcvIndex, trcvEvEn.TJA1145FD_CBSE, trcvEvEn.TJA1145FD_CFE, trcvEvEn.TJA1145FD_CWE) != NXP_UJA11XX_SUCCESS){
 				ret = E_NOT_OK;
 			}  		
-			if (TJA1145_SetPNActivationState((CanTrcv_PNActivationType) TJA1145FD_CPNC_SLEEP) != E_OK){
+			if (TJA1145_SetPNActivationState(CanTrcvIndex, (CanTrcv_PNActivationType) TJA1145FD_CPNC_SLEEP) != E_OK){
 				ret = E_NOT_OK;
 			}
-			(void) TJA1145FD_setLockControl(TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_DISABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
+			(void) TJA1145FD_setLockControl(CanTrcvIndex, TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_DISABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
 
 
 			// If no interrupt is pending, enter TJA1145 Standby Mode
-			(void) TJA1145FD_getGlobalEventStatus(&pendingEvent.TJA1145FD_WPE, &pendingEvent.TJA1145FD_TRXE, &pendingEvent.TJA1145FD_SYSE);
+			(void) TJA1145FD_getGlobalEventStatus(CanTrcvIndex, &pendingEvent.TJA1145FD_WPE, &pendingEvent.TJA1145FD_TRXE, &pendingEvent.TJA1145FD_SYSE);
 			if((pendingEvent.TJA1145FD_WPE == TJA1145FD_WPE_NO_WAKE_PIN_EVENT) &&
 				(pendingEvent.TJA1145FD_TRXE == TJA1145FD_TRXE_NO_TRANSCEIVER_EVENT) &&
 				(pendingEvent.TJA1145FD_SYSE == TJA1145FD_SYSE_NO_SYSTEM_EVENT)){                             
@@ -557,29 +555,29 @@ StdReturn_t ChangeToSleepOperation(){
 					if ( ret == E_OK && (TJA1145FD_CPNC_SLEEP == TJA1145FD_CPNC_CAN_SELECTIVE_WAKEUP_ENABLE)){
 
 						// dedicated request to clear the WUF flag
-						if (TJA1145_ClearTrcvWufFlag() == E_NOT_OK){
+						if (TJA1145_ClearTrcvWufFlag(CanTrcvIndex) == E_NOT_OK){
 							ret = E_NOT_OK;
 						}	
 						// Disable CAN PE; wake-up disabled
-						(void) CANStopMode();
+						(void) CANStopMode(CanTrcvIndex);
 						// Enter TJA1145 Standby Mode
-						if (TJA1145_SetOpMode(CANTRCV_TRCVMODE_STANDBY) == E_NOT_OK){
+						if (TJA1145_SetOpMode(CanTrcvIndex, CANTRCV_TRCVMODE_STANDBY) == E_NOT_OK){
 							ret = E_NOT_OK;
 						}	
 						// Disable CAN PE; wake-up enabled
-						(void) CANSleepMode();	
+						(void) CANSleepMode(CanTrcvIndex);	
 						// Check if WUF has occured meanwhile; If yes, wake up ECU again
-						if (TJA1145_CheckWakeFlag() == E_NOT_OK){
+						if (TJA1145_CheckWakeFlag(CanTrcvIndex) == E_NOT_OK){
 							ret = E_NOT_OK;
 						}
 					}    	  
 					// If partial networking is not activated in TJA1145 
 					else {
 						// Disable CAN PE, activate wake-up
-						(void) CANStopMode();
-						(void) CANSleepMode();	
+						(void) CANStopMode(CanTrcvIndex);
+						(void) CANSleepMode(CanTrcvIndex);	
 						// Enter TJA1145 Standby Mode
-						if (TJA1145_SetOpMode(CANTRCV_TRCVMODE_STANDBY) == E_NOT_OK){
+						if (TJA1145_SetOpMode(CanTrcvIndex, CANTRCV_TRCVMODE_STANDBY) == E_NOT_OK){
 							ret = E_NOT_OK;
 						}
 					}
@@ -587,24 +585,24 @@ StdReturn_t ChangeToSleepOperation(){
 					// if CAN shutdown and entering Standby Mode was successful
 					if (ret == E_OK){          
 
-						(void) ClearNormalModeLed();         
+						(void) ClearNormalModeLed(CanTrcvIndex);         
 
 						// Enter TJA1145 Sleep Mode 
-						(void) TJA1145_SetOpMode(CANTRCV_TRCVMODE_SLEEP);  
+						(void) TJA1145_SetOpMode(CanTrcvIndex, CANTRCV_TRCVMODE_SLEEP);  
 
 						// If Sleep Mode is entered SW should never enter this point in SW
 	    	      	
 					} else { 
 
 						// Enter Normal Operation Mode is scheduled
-						(void) AddTaskToScheduler(CHANGE_TO_NORMAL);
-						PendingEvent = TRUE;   	    		
+						(void) AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_NORMAL);
+						TJA1145FD_PendingEvent[CanTrcvIndex] = TRUE;   	    		
 					}   
 			} else {
 
 				// Enter Normal Operation Mode is scheduled
-				(void) AddTaskToScheduler(CHANGE_TO_NORMAL);
-				PendingEvent = TRUE;  
+				(void) AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_NORMAL);
+				TJA1145FD_PendingEvent[CanTrcvIndex] = TRUE;  
 			}
 		}  
 	}
@@ -626,35 +624,35 @@ StdReturn_t ChangeToSleepOperation(){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t ChangeToNormalOperation(){
+StdReturn_t ChangeToNormalOperation(Byte CanTrcvIndex){
 	StdReturn_t ret = E_OK; 
 	TJA1145FD_System_Event_Enable_Reg_t sysEvEn = TJA1145FD_SYS_EVENT_EN_NORMAL; 
 	TJA1145FD_Transceiver_Event_Enable_Reg_t trcvEvEn = TJA1145FD_TRX_EVENT_EN_NORMAL;
 	TJA1145FD_Wake_Pin_Enable_Reg_t wakeEvEn = TJA1145FD_WAKE_PIN_EN_NORMAL;
 
 	// Enter TJA1145 Normal Mode
-	if(TJA1145FD_setModeControlReg(TJA1145FD_MC_NORMAL_MODE) != NXP_UJA11XX_SUCCESS){
+	if(TJA1145_SetOpMode(CanTrcvIndex, CANTRCV_TRCVMODE_NORMAL) != E_OK){
 		ret = E_NOT_OK;
 	} else {      
 
 		// Configure to be captured events in Normal Mode
-		if(TJA1145FD_setSystemEventEnable(sysEvEn.TJA1145FD_OTWE, sysEvEn.TJA1145FD_SPIFE) != NXP_UJA11XX_SUCCESS){
+		if(TJA1145FD_setSystemEventEnable(CanTrcvIndex, sysEvEn.TJA1145FD_OTWE, sysEvEn.TJA1145FD_SPIFE) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK;
 		}   			       
-		if (TJA1145FD_setWakePinEnable(wakeEvEn.TJA1145FD_WPRE, wakeEvEn.TJA1145FD_WPFE) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setWakePinEnable(CanTrcvIndex, wakeEvEn.TJA1145FD_WPRE, wakeEvEn.TJA1145FD_WPFE) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK;
 		}
 
-		(void) TJA1145FD_setLockControl(TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_ENABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
-		if (TJA1145FD_setTransceiverEventEnable(trcvEvEn.TJA1145FD_CBSE, trcvEvEn.TJA1145FD_CFE, trcvEvEn.TJA1145FD_CWE) != NXP_UJA11XX_SUCCESS){
+		(void) TJA1145FD_setLockControl(CanTrcvIndex, TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_ENABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
+		if (TJA1145FD_setTransceiverEventEnable(CanTrcvIndex, trcvEvEn.TJA1145FD_CBSE, trcvEvEn.TJA1145FD_CFE, trcvEvEn.TJA1145FD_CWE) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK;
 		}
-		(void) TJA1145FD_setLockControl(TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_DISABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
+		(void) TJA1145FD_setLockControl(CanTrcvIndex, TJA1145FD_LK6C_SPI_WRITE_ACCESS_DISABLED_0X68_TO_0X6F, TJA1145FD_LK5C_SPI_WRITE_ACCESS_DISABLED_0X50_TO_0X5F, TJA1145FD_LK4C_SPI_WRITE_ACCESS_ENABLED_0X40_TO_0X4F, TJA1145FD_LK3C_SPI_WRITE_ACCESS_DISABLED_0X30_TO_0X3F, TJA1145FD_LK2C_SPI_WRITE_ACCESS_DISABLED_0X20_TO_0X2F, TJA1145FD_LK1C_SPI_WRITE_ACCESS_DISABLED_0X10_TO_0X1F, TJA1145FD_LK0C_SPI_WRITE_ACCESS_DISABLED_0X06_TO_0X09);
 
-		(void) SetNormalModeLed(); 
+		(void) SetNormalModeLed(CanTrcvIndex); 
 
 		// check CAN and LIN transceiver and supply status; if CFS or VCS or VLINS are ok, CAN communication can be started
-		PollTransceiverStatus();	
+		PollTransceiverStatus(CanTrcvIndex);	
 	}	   	
 
 	return ret;
@@ -674,7 +672,7 @@ StdReturn_t ChangeToNormalOperation(){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t EventHandling() {
+StdReturn_t EventHandling(Byte CanTrcvIndex) {
 	StdReturn_t ret = E_OK;
 	TJA1145FD_Global_Event_Status_Reg_t pendingEv;
 	TJA1145FD_System_Event_Status_Reg_t sysEv;
@@ -682,80 +680,80 @@ StdReturn_t EventHandling() {
 	TJA1145FD_Wake_Pin_Event_Reg_t wakeEv;
 
 	// read Global Event Status Register
-	(void) TJA1145FD_getGlobalEventStatus(&pendingEv.TJA1145FD_WPE, &pendingEv.TJA1145FD_TRXE, &pendingEv.TJA1145FD_SYSE);
+	(void) TJA1145FD_getGlobalEventStatus(CanTrcvIndex, &pendingEv.TJA1145FD_WPE, &pendingEv.TJA1145FD_TRXE, &pendingEv.TJA1145FD_SYSE);
 
 	// System Event pending
 	if (pendingEv.TJA1145FD_SYSE == TJA1145FD_SYSE_SYSTEM_EVENT_PENDING) {
-		(void) TJA1145FD_getSystemEventStatus(&sysEv.TJA1145FD_PO, &sysEv.TJA1145FD_OTW, &sysEv.TJA1145FD_SPIF);
+		(void) TJA1145FD_getSystemEventStatus(CanTrcvIndex, &sysEv.TJA1145FD_PO, &sysEv.TJA1145FD_OTW, &sysEv.TJA1145FD_SPIF);
 		// PO Event pending
 		if(sysEv.TJA1145FD_PO == TJA1145FD_PO_OFF_MODE_LEFT) {
-			if (TJA1145_PO_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_PO_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 			// store wake-up reason "power-on"
-			WuReason = CANTRCV_WU_POWER_ON;	
+			TJA1145FD_WuReason[CanTrcvIndex] = CANTRCV_WU_POWER_ON;	
 		}
 		// OTW Event pending
 		if(sysEv.TJA1145FD_OTW == TJA1145FD_OTW_TEMPERATURE_EXCEEDS_WARNING_LEVEL) {
-			if (TJA1145_OTW_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_OTW_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}	
 		}
 		// SPIF Event pending
 		if(sysEv.TJA1145FD_SPIF == TJA1145FD_SPIF_SPI_FAILURE_DETECTED) {
-			if (TJA1145_SPIF_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_SPIF_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 		}		
 	}
 	// Transceiver Event pending
 	if (pendingEv.TJA1145FD_TRXE == TJA1145FD_TRXE_TRANSCEIVER_EVENT_PENDING) {
-		(void) TJA1145FD_getTransceiverEventStatus(&trcvEv.TJA1145FD_PNFDE, &trcvEv.TJA1145FD_CBS, &trcvEv.TJA1145FD_CF, &trcvEv.TJA1145FD_CW);
+		(void) TJA1145FD_getTransceiverEventStatus(CanTrcvIndex, &trcvEv.TJA1145FD_PNFDE, &trcvEv.TJA1145FD_CBS, &trcvEv.TJA1145FD_CF, &trcvEv.TJA1145FD_CW);
 
 		// PNFD Event pending
 		if(trcvEv.TJA1145FD_PNFDE == TJA1145FD_PNFDE_PARTIAL_NETWORK_FRAME_ERROR_DETECTED) {
-			if (TJA1145_PNFDE_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_PNFDE_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 			// store wake-up reason "SYSERR"
-			WuReason = CANTRCV_WU_BY_SYSERR;
+			TJA1145FD_WuReason[CanTrcvIndex] = CANTRCV_WU_BY_SYSERR;
 		}
 		// CW Event pending
 		if(trcvEv.TJA1145FD_CW == TJA1145FD_CW_CAN_WAKEUP_EVENT) {
-			if (TJA1145_CW_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_CW_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 		}
 		// CF Event pending
 		if(trcvEv.TJA1145FD_CF == TJA1145FD_CF_CAN_FAILURE_DETECTED) {
-			if (TJA1145_CF_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_CF_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 		}
 		// CBS Event pending
 		if(trcvEv.TJA1145FD_CBS == TJA1145FD_CBS_NO_CAN_BUS_ACTIVITY) {
-			if (TJA1145_CBS_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_CBS_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 		}
 	}
 	// Wake Pin Event pending
 	if (pendingEv.TJA1145FD_WPE == TJA1145FD_WPE_WAKE_PIN_EVENT_PENDING) {
-		(void) TJA1145FD_getWakePinEvent(&wakeEv.TJA1145FD_WPR, &wakeEv.TJA1145FD_WPF); 		
+		(void) TJA1145FD_getWakePinEvent(CanTrcvIndex, &wakeEv.TJA1145FD_WPR, &wakeEv.TJA1145FD_WPF); 		
 		if(wakeEv.TJA1145FD_WPR == TJA1145FD_WPR_WAKEPIN_RISING_EDGE_DETECTED) {
-			if (TJA1145_WPR_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_WPR_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 			// save wake-up reason
-			WuReason = CANTRCV_WU_BY_PIN;
+			TJA1145FD_WuReason[CanTrcvIndex] = CANTRCV_WU_BY_PIN;
 		}
 		// CW Event pending
 		if(wakeEv.TJA1145FD_WPF == TJA1145FD_WPF_WAKEPIN_FALLING_EDGE_DETECTED) {
-			if (TJA1145_WPF_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_WPF_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 			// save wake-up reason
-			WuReason = CANTRCV_WU_BY_PIN;
+			TJA1145FD_WuReason[CanTrcvIndex] = CANTRCV_WU_BY_PIN;
 		}
 	}
 
@@ -776,100 +774,100 @@ StdReturn_t EventHandling() {
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t RxdLowHandling() {
+StdReturn_t RxdLowHandling(Byte CanTrcvIndex) {
 	StdReturn_t ret = E_OK;
 	TJA1145FD_Global_Event_Status_Reg_t pendingEv;
 	TJA1145FD_System_Event_Status_Reg_t sysEv;
 	TJA1145FD_Transceiver_Event_Status_Reg_t trcvEv;
 	TJA1145FD_Wake_Pin_Event_Reg_t wakeEv;
 
-	WuReason = CANTRCV_WU_INTERNALLY;
+	TJA1145FD_WuReason[CanTrcvIndex] = CANTRCV_WU_INTERNALLY;
 
 	// read Global Event Status Register
-	(void) TJA1145FD_getGlobalEventStatus(&pendingEv.TJA1145FD_WPE, &pendingEv.TJA1145FD_TRXE, &pendingEv.TJA1145FD_SYSE);
+	(void) TJA1145FD_getGlobalEventStatus(CanTrcvIndex, &pendingEv.TJA1145FD_WPE, &pendingEv.TJA1145FD_TRXE, &pendingEv.TJA1145FD_SYSE);
 
 	// System Event pending
 	if (pendingEv.TJA1145FD_SYSE == TJA1145FD_SYSE_SYSTEM_EVENT_PENDING) {
-		(void) TJA1145FD_getSystemEventStatus(&sysEv.TJA1145FD_PO, &sysEv.TJA1145FD_OTW, &sysEv.TJA1145FD_SPIF);
+		(void) TJA1145FD_getSystemEventStatus(CanTrcvIndex, &sysEv.TJA1145FD_PO, &sysEv.TJA1145FD_OTW, &sysEv.TJA1145FD_SPIF);
 
 		// Power On event cannot be pending --> can never be set during running Operation
 
 		// OTW Event pending
 		if(sysEv.TJA1145FD_OTW == TJA1145FD_OTW_TEMPERATURE_EXCEEDS_WARNING_LEVEL) {
-			if (TJA1145_OTW_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_OTW_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 			// Enter Stop Mode again
-			AddTaskToScheduler(CHANGE_TO_STANDBY);
+			AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_STANDBY);
 		}
 		// SPIF Event pending
 		if(sysEv.TJA1145FD_SPIF == TJA1145FD_SPIF_SPI_FAILURE_DETECTED) {
-			if (TJA1145_SPIF_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_SPIF_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 			// Enter Stop Mode again
-			AddTaskToScheduler(CHANGE_TO_STANDBY);
+			AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_STANDBY);
 		}	
 	}
 	// Transceiver Event pending
 	if (pendingEv.TJA1145FD_TRXE == TJA1145FD_TRXE_TRANSCEIVER_EVENT_PENDING) {
-		(void) TJA1145FD_getTransceiverEventStatus(&trcvEv.TJA1145FD_PNFDE, &trcvEv.TJA1145FD_CBS, &trcvEv.TJA1145FD_CF, &trcvEv.TJA1145FD_CW);
+		(void) TJA1145FD_getTransceiverEventStatus(CanTrcvIndex, &trcvEv.TJA1145FD_PNFDE, &trcvEv.TJA1145FD_CBS, &trcvEv.TJA1145FD_CF, &trcvEv.TJA1145FD_CW);
 		// PNFD Event pending
 		if(trcvEv.TJA1145FD_PNFDE == TJA1145FD_PNFDE_PARTIAL_NETWORK_FRAME_ERROR_DETECTED) {
-			if (TJA1145_PNFDE_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_PNFDE_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 			// put TJA1145 in Normal Mode
-			(void) AddTaskToScheduler(CHANGE_TO_NORMAL);
+			(void) AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_NORMAL);
 			// store wake-up reason "SYSERR"
-			WuReason = CANTRCV_WU_BY_SYSERR;
+			TJA1145FD_WuReason[CanTrcvIndex] = CANTRCV_WU_BY_SYSERR;
 		}
 		// CW Event pending
 		if(trcvEv.TJA1145FD_CW == TJA1145FD_CW_CAN_WAKEUP_EVENT) {
-			if (TJA1145_CW_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_CW_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}				
 			// put TJA1145 in Normal Mode
-			AddTaskToScheduler(CHANGE_TO_NORMAL);			
+			AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_NORMAL);			
 		}
 		// CF Event pending
 		if(trcvEv.TJA1145FD_CF == TJA1145FD_CF_CAN_FAILURE_DETECTED) {
-			if (TJA1145_CF_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_CF_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 			// Enter Stop Mode again
-			AddTaskToScheduler(CHANGE_TO_STANDBY);
+			AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_STANDBY);
 		}
 		// CBS Event pending
 		if(trcvEv.TJA1145FD_CBS == TJA1145FD_CBS_NO_CAN_BUS_ACTIVITY) {
-			if (TJA1145_CBS_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_CBS_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}   
 			// If no CAN communication is ongoing anymore, TJA1145 is put to Sleep Mode to reduce power consumption   	
-			AddTaskToScheduler(CHANGE_TO_SLEEP);  			                                             	
+			AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_SLEEP);  			                                             	
 		}
 	}
 	// Wake Pin Event pending
 	if (pendingEv.TJA1145FD_WPE == TJA1145FD_WPE_WAKE_PIN_EVENT_PENDING) {
-		(void) TJA1145FD_getWakePinEvent(&wakeEv.TJA1145FD_WPR, &wakeEv.TJA1145FD_WPF); 		
+		(void) TJA1145FD_getWakePinEvent(CanTrcvIndex, &wakeEv.TJA1145FD_WPR, &wakeEv.TJA1145FD_WPF); 		
 		if(wakeEv.TJA1145FD_WPR == TJA1145FD_WPR_WAKEPIN_RISING_EDGE_DETECTED) {
-			if (TJA1145_WPR_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_WPR_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 			// Enter Normal Mode
-			AddTaskToScheduler(CHANGE_TO_NORMAL);
+			AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_NORMAL);
 			// save wake-up reason
-			WuReason = CANTRCV_WU_BY_PIN;
+			TJA1145FD_WuReason[CanTrcvIndex] = CANTRCV_WU_BY_PIN;
 		}
 		// CW Event pending
 		if(wakeEv.TJA1145FD_WPF == TJA1145FD_WPF_WAKEPIN_FALLING_EDGE_DETECTED) {
-			if (TJA1145_WPF_ServiceRoutine() == E_NOT_OK){
+			if (TJA1145_WPF_ServiceRoutine(CanTrcvIndex) == E_NOT_OK){
 				ret = E_NOT_OK;
 			}
 			// Enter Normal Mode
-			AddTaskToScheduler(CHANGE_TO_NORMAL);
+			AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_NORMAL);
 			// save wake-up reason
-			WuReason = CANTRCV_WU_BY_PIN;
+			TJA1145FD_WuReason[CanTrcvIndex] = CANTRCV_WU_BY_PIN;
 		}			
 	}  
 
@@ -888,20 +886,20 @@ StdReturn_t RxdLowHandling() {
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-void PollTransceiverStatus(){
+void PollTransceiverStatus(Byte CanTrcvIndex){
 	TJA1145FD_Transceiver_Status_Reg_t trcvStatus;              
 
-	(void) TJA1145FD_getTransceiverStatus(&trcvStatus.TJA1145FD_CTS, &trcvStatus.TJA1145FD_CPNERR, &trcvStatus.TJA1145FD_CPNS, &trcvStatus.TJA1145FD_COSCS, &trcvStatus.TJA1145FD_CBSS, &trcvStatus.TJA1145FD_VCS, &trcvStatus.TJA1145FD_CFS);
+	(void) TJA1145FD_getTransceiverStatus(CanTrcvIndex, &trcvStatus.TJA1145FD_CTS, &trcvStatus.TJA1145FD_CPNERR, &trcvStatus.TJA1145FD_CPNS, &trcvStatus.TJA1145FD_COSCS, &trcvStatus.TJA1145FD_CBSS, &trcvStatus.TJA1145FD_VCS, &trcvStatus.TJA1145FD_CFS);
 	if((trcvStatus.TJA1145FD_CFS == TJA1145FD_CFS_NO_TXD_TIMEOUT_EVENT) && (trcvStatus.TJA1145FD_VCS == TJA1145FD_VCS_OUTPUT_VOLTAGE_ON_V1_IS_ABOVE_THE_90_THRESHOLD) && (trcvStatus.TJA1145FD_CTS == TJA1145FD_CTS_CAN_TRANSMITTER_READY_TO_TRANSMIT_DATA)){
 		// Restart CAN communication (enable CAN PE and start transmission)
-		ResumeCAN_TX(); 	 
+		ResumeCAN_TX(CanTrcvIndex); 	 
 	} else {
 		// Stop CAN transmission
-		(void) StopCAN_TX();
+		(void) StopCAN_TX(CanTrcvIndex);
 		// Stop CAN PE
-		(void) CANStopMode();
+		(void) CANStopMode(CanTrcvIndex);
 		// Schedule Poll transceiver status
-		CheckTrcvStatus = TRUE;   
+		TJA1145FD_CheckTrcvStatus[CanTrcvIndex] = TRUE;   
 	}
 }
 
@@ -919,21 +917,21 @@ void PollTransceiverStatus(){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-void PortSupervisor (void){
+void PortSupervisor (Byte CanTrcvIndex){
 	Byte portData = 0;
 
-	portData = ScanPort();
+	portData = ScanPort(CanTrcvIndex);
 	if((portData & PORTMASK_NORMAL) == 0){      
 		// Normal
-		AddTaskToScheduler(CHANGE_TO_NORMAL);   
+		AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_NORMAL);   
 	}
 	else if((portData & PORTMASK_STANDBY) == 0){ 
 		// Standby
-		AddTaskToScheduler(CHANGE_TO_STANDBY);   
+		AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_STANDBY);   
 	}
 	else if((portData & PORTMASK_SLEEP) == 0){
 		// Sleep
-		AddTaskToScheduler(CHANGE_TO_SLEEP);    
+		AddTaskToScheduler(CanTrcvIndex, CHANGE_TO_SLEEP);    
 	} 
 }
 
@@ -947,10 +945,10 @@ void PortSupervisor (void){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-void WakeSupervisor(void){
+void WakeSupervisor(Byte CanTrcvIndex){
 	TJA1145FD_Wake_Status_Reg_t wakeStatus;
 
-	(void) TJA1145FD_getWakeStatus(&wakeStatus.TJA1145FD_WPVS);
+	(void) TJA1145FD_getWakeStatus(CanTrcvIndex, &wakeStatus.TJA1145FD_WPVS);
 	if (wakeStatus.TJA1145FD_WPVS == TJA1145FD_WPVS_VOLTAGE_BELOW_SWITCHING_THRESHOLD) {
 		// application specific actions ...
 	} 
@@ -973,7 +971,7 @@ void WakeSupervisor(void){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK	
 */
-StdReturn_t TJA1145_SetPnIdentifier(Word id, TJA1145FD_Identifier_Format_t idFormat){
+StdReturn_t TJA1145_SetPnIdentifier(Byte CanTrcvIndex, Word id, TJA1145FD_Identifier_Format_t idFormat){
 	StdReturn_t ret = E_OK;
 	Byte IdReg0, IdReg1, IdReg2_0, IdReg2_1, IdReg3 = 0x0;	
 
@@ -984,16 +982,16 @@ StdReturn_t TJA1145_SetPnIdentifier(Word id, TJA1145FD_Identifier_Format_t idFor
 		IdReg2_0 = (Byte) ((id & 0x00030000) >> 16);
 		IdReg2_1 = (Byte) ((id & 0x00fc0000) >> 18);
 		IdReg3 = (Byte) ((id & 0xff000000) >> 24);
-		if (TJA1145FD_setCANIdentifier0(IdReg0) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setCANIdentifier0(CanTrcvIndex, IdReg0) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK; 
 		}
-		if (TJA1145FD_setCANIdentifier1(IdReg1) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setCANIdentifier1(CanTrcvIndex, IdReg1) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK; 
 		}
-		if (TJA1145FD_setCANIdentifier2(IdReg2_1, IdReg2_0) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setCANIdentifier2(CanTrcvIndex, IdReg2_1, IdReg2_0) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK; 
 		}
-		if (TJA1145FD_setCANIdentifier3(IdReg3) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setCANIdentifier3(CanTrcvIndex, IdReg3) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK; 
 		}
 	} else {
@@ -1001,10 +999,10 @@ StdReturn_t TJA1145_SetPnIdentifier(Word id, TJA1145FD_Identifier_Format_t idFor
 		IdReg2_0 = 0x0;
 		IdReg2_1 = (Byte) (id & 0x3F);
 		IdReg3 = (Byte) ((id & 0x7C0) >> 6);	
-		if (TJA1145FD_setCANIdentifier2(IdReg2_1, IdReg2_0) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setCANIdentifier2(CanTrcvIndex, IdReg2_1, IdReg2_0) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK; 
 		}
-		if (TJA1145FD_setCANIdentifier3(IdReg3) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setCANIdentifier3(CanTrcvIndex, IdReg3) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK; 
 		}
 	}
@@ -1029,7 +1027,7 @@ StdReturn_t TJA1145_SetPnIdentifier(Word id, TJA1145FD_Identifier_Format_t idFor
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK	
 */
-StdReturn_t TJA1145_SetPnIdMask(Word mask, TJA1145FD_Identifier_Format_t idFormat){
+StdReturn_t TJA1145_SetPnIdMask(Byte CanTrcvIndex, Word mask, TJA1145FD_Identifier_Format_t idFormat){
 	StdReturn_t ret = E_OK;
 	Byte IdMaskReg0, IdMaskReg1, IdMaskReg2_0, IdMaskReg2_1, IdMaskReg3 = 0x0;		
 
@@ -1040,16 +1038,16 @@ StdReturn_t TJA1145_SetPnIdMask(Word mask, TJA1145FD_Identifier_Format_t idForma
 		IdMaskReg2_0 = (Byte) ((mask & 0x00030000) >> 16);
 		IdMaskReg2_1 = (Byte) ((mask & 0x00fc0000) >> 18);
 		IdMaskReg3 = (Byte) ((mask & 0xff000000) >> 24);
-		if (TJA1145FD_setCANMask0(IdMaskReg0) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setCANMask0(CanTrcvIndex, IdMaskReg0) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK; 
 		}
-		if (TJA1145FD_setCANMask1(IdMaskReg1) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setCANMask1(CanTrcvIndex, IdMaskReg1) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK; 
 		}
-		if (TJA1145FD_setCANMask2(IdMaskReg2_1, IdMaskReg2_0) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setCANMask2(CanTrcvIndex, IdMaskReg2_1, IdMaskReg2_0) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK; 
 		}
-		if (TJA1145FD_setCANMask3(IdMaskReg3) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setCANMask3(CanTrcvIndex, IdMaskReg3) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK; 
 		}
 	} else {
@@ -1057,10 +1055,10 @@ StdReturn_t TJA1145_SetPnIdMask(Word mask, TJA1145FD_Identifier_Format_t idForma
 		IdMaskReg2_0 = 0x0;
 		IdMaskReg2_1 = (Byte) (mask & 0x3F);
 		IdMaskReg3 = (Byte) ((mask & 0x7C0) >> 6);	
-		if (TJA1145FD_setCANMask2(IdMaskReg2_1, IdMaskReg2_0) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setCANMask2(CanTrcvIndex, IdMaskReg2_1, IdMaskReg2_0) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK; 
 		}
-		if (TJA1145FD_setCANMask3(IdMaskReg3) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setCANMask3(CanTrcvIndex, IdMaskReg3) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK; 
 		}
 	}
@@ -1080,67 +1078,67 @@ StdReturn_t TJA1145_SetPnIdMask(Word mask, TJA1145FD_Identifier_Format_t idForma
 *                               possible values: E_OK, E_NOT_OK
 */
 
-StdReturn_t ConfigurePartialNetworking(){
+StdReturn_t ConfigurePartialNetworking(Byte CanTrcvIndex){
 	StdReturn_t ret = E_OK;
 	TJA1145FD_CAN_Control_Reg_t cc;
 	TJA1145FD_Lock_Control_Reg_t lockCtrl;
 
-	(void) TJA1145FD_getLockControl(&lockCtrl.TJA1145FD_LK6C, &lockCtrl.TJA1145FD_LK5C, &lockCtrl.TJA1145FD_LK4C, &lockCtrl.TJA1145FD_LK3C, &lockCtrl.TJA1145FD_LK2C, &lockCtrl.TJA1145FD_LK1C, &lockCtrl.TJA1145FD_LK0C);
-	(void) TJA1145FD_setLockControl(TJA1145FD_LK6C_SPI_WRITE_ACCESS_ENABLED_0X68_TO_0X6F, lockCtrl.TJA1145FD_LK5C, lockCtrl.TJA1145FD_LK4C, lockCtrl.TJA1145FD_LK3C, TJA1145FD_LK2C_SPI_WRITE_ACCESS_ENABLED_0X20_TO_0X2F, lockCtrl.TJA1145FD_LK1C, lockCtrl.TJA1145FD_LK0C);
+	(void) TJA1145FD_getLockControl(CanTrcvIndex, &lockCtrl.TJA1145FD_LK6C, &lockCtrl.TJA1145FD_LK5C, &lockCtrl.TJA1145FD_LK4C, &lockCtrl.TJA1145FD_LK3C, &lockCtrl.TJA1145FD_LK2C, &lockCtrl.TJA1145FD_LK1C, &lockCtrl.TJA1145FD_LK0C);
+	(void) TJA1145FD_setLockControl(CanTrcvIndex, TJA1145FD_LK6C_SPI_WRITE_ACCESS_ENABLED_0X68_TO_0X6F, lockCtrl.TJA1145FD_LK5C, lockCtrl.TJA1145FD_LK4C, lockCtrl.TJA1145FD_LK3C, TJA1145FD_LK2C_SPI_WRITE_ACCESS_ENABLED_0X20_TO_0X2F, lockCtrl.TJA1145FD_LK1C, lockCtrl.TJA1145FD_LK0C);
 
 	// configure CAN data rate
-	if (TJA1145FD_setDataRate(TJA1145FD_CAN_DATA_RATE) == E_NOT_OK){
+	if (TJA1145FD_setDataRate(CanTrcvIndex, TJA1145FD_CAN_DATA_RATE) == E_NOT_OK){
 		ret = E_NOT_OK;
 	}
 	// configure CAN ID registers
-	if (TJA1145_SetPnIdentifier(UJA116FDVX_CAN_ID, TJA1145FD_CAN_FRAME_CONTROL.TJA1145FD_IDE) == E_NOT_OK){
+	if (TJA1145_SetPnIdentifier(CanTrcvIndex, UJA116FDVX_CAN_ID, TJA1145FD_CAN_FRAME_CONTROL.TJA1145FD_IDE) == E_NOT_OK){
 		ret = E_NOT_OK;
 	}
 	// configure CAN ID mask registers
-	if (TJA1145_SetPnIdMask(TJA1145FD_CAN_ID_MASK, TJA1145FD_CAN_FRAME_CONTROL.TJA1145FD_IDE) == E_NOT_OK){
+	if (TJA1145_SetPnIdMask(CanTrcvIndex, TJA1145FD_CAN_ID_MASK, TJA1145FD_CAN_FRAME_CONTROL.TJA1145FD_IDE) == E_NOT_OK){
 		ret = E_NOT_OK;
 	}
 	// configure CAN Frame Control register
-	if ( TJA1145FD_setFrameControl(TJA1145FD_CAN_FRAME_CONTROL.TJA1145FD_IDE, TJA1145FD_CAN_FRAME_CONTROL.TJA1145FD_PNDM, TJA1145FD_CAN_FRAME_CONTROL.TJA1145FD_DLC) != NXP_UJA11XX_SUCCESS){
+	if ( TJA1145FD_setFrameControl(CanTrcvIndex, TJA1145FD_CAN_FRAME_CONTROL.TJA1145FD_IDE, TJA1145FD_CAN_FRAME_CONTROL.TJA1145FD_PNDM, TJA1145FD_CAN_FRAME_CONTROL.TJA1145FD_DLC) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
 	// configure CAN Data Byte registers
-	if (TJA1145FD_setDataMask0(TJA1145FD_CAN_DATA_MASK0) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setDataMask0(CanTrcvIndex, TJA1145FD_CAN_DATA_MASK0) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
-	if (TJA1145FD_setDataMask1(TJA1145FD_CAN_DATA_MASK1) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setDataMask1(CanTrcvIndex, TJA1145FD_CAN_DATA_MASK1) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
-	if (TJA1145FD_setDataMask2(TJA1145FD_CAN_DATA_MASK2) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setDataMask2(CanTrcvIndex, TJA1145FD_CAN_DATA_MASK2) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
-	if (TJA1145FD_setDataMask3(TJA1145FD_CAN_DATA_MASK3) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setDataMask3(CanTrcvIndex, TJA1145FD_CAN_DATA_MASK3) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
-	if (TJA1145FD_setDataMask4(TJA1145FD_CAN_DATA_MASK4) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setDataMask4(CanTrcvIndex, TJA1145FD_CAN_DATA_MASK4) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
-	if (TJA1145FD_setDataMask5(TJA1145FD_CAN_DATA_MASK5) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setDataMask5(CanTrcvIndex, TJA1145FD_CAN_DATA_MASK5) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
-	if (TJA1145FD_setDataMask6(TJA1145FD_CAN_DATA_MASK6) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setDataMask6(CanTrcvIndex, TJA1145FD_CAN_DATA_MASK6) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
-	if (TJA1145FD_setDataMask7(TJA1145FD_CAN_DATA_MASK7) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setDataMask7(CanTrcvIndex, TJA1145FD_CAN_DATA_MASK7) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
 
 	// If all registers are configured correctly, the PNCOK bit in the CAN Control register is set
-	if (TJA1145FD_getCANControl(&cc.TJA1145FD_CFDC, &cc.TJA1145FD_PNCOK, &cc.TJA1145FD_CPNC, &cc.TJA1145FD_CMC)!= NXP_UJA11XX_SUCCESS) {
+	if (TJA1145FD_getCANControl(CanTrcvIndex, &cc.TJA1145FD_CFDC, &cc.TJA1145FD_PNCOK, &cc.TJA1145FD_CPNC, &cc.TJA1145FD_CMC)!= NXP_UJA11XX_SUCCESS) {
 		ret = E_NOT_OK;
 	}
 	if (ret == E_OK){
-		if (TJA1145FD_setCANControl(cc.TJA1145FD_CFDC, TJA1145FD_PNCOK_PARTIAL_NETWORK_CONFIGURATION_SUCCESSFUL, cc.TJA1145FD_CPNC, cc.TJA1145FD_CMC) != NXP_UJA11XX_SUCCESS) {
+		if (TJA1145FD_setCANControl(CanTrcvIndex, cc.TJA1145FD_CFDC, TJA1145FD_PNCOK_PARTIAL_NETWORK_CONFIGURATION_SUCCESSFUL, cc.TJA1145FD_CPNC, cc.TJA1145FD_CMC) != NXP_UJA11XX_SUCCESS) {
 			ret = E_NOT_OK;
 		}
 	}
 
-	(void) TJA1145FD_setLockControl(lockCtrl.TJA1145FD_LK6C, lockCtrl.TJA1145FD_LK5C, lockCtrl.TJA1145FD_LK4C, lockCtrl.TJA1145FD_LK3C, lockCtrl.TJA1145FD_LK2C, lockCtrl.TJA1145FD_LK1C, lockCtrl.TJA1145FD_LK0C);
+	(void) TJA1145FD_setLockControl(CanTrcvIndex, lockCtrl.TJA1145FD_LK6C, lockCtrl.TJA1145FD_LK5C, lockCtrl.TJA1145FD_LK4C, lockCtrl.TJA1145FD_LK3C, lockCtrl.TJA1145FD_LK2C, lockCtrl.TJA1145FD_LK1C, lockCtrl.TJA1145FD_LK0C);
 
 	return ret;
 }
@@ -1157,14 +1155,14 @@ StdReturn_t ConfigurePartialNetworking(){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_SPIF_ServiceRoutine() {
+StdReturn_t TJA1145_SPIF_ServiceRoutine(Byte CanTrcvIndex) {
 	StdReturn_t ret = E_OK;
 
 	// application specific code ...    
-	AddToFailureMemory(SPI_FAILURE);
+	AddToTJA1145FD_FailureMemory(CanTrcvIndex, SPI_FAILURE);
 
 	// Clear SPIF Event flag
-	if (TJA1145FD_setSystemEventStatus(TJA1145FD_PO_NO_POWER_ON, TJA1145FD_OTW_NO_OVER_TEMPERATURE, TJA1145FD_SPIF_SPI_FAILURE_DETECTED) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setSystemEventStatus(CanTrcvIndex, TJA1145FD_PO_NO_POWER_ON, TJA1145FD_OTW_NO_OVER_TEMPERATURE, TJA1145FD_SPIF_SPI_FAILURE_DETECTED) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}                 
 
@@ -1183,16 +1181,16 @@ StdReturn_t TJA1145_SPIF_ServiceRoutine() {
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_OTW_ServiceRoutine(){
+StdReturn_t TJA1145_OTW_ServiceRoutine(Byte CanTrcvIndex){
 	StdReturn_t ret = E_OK;
 
 	// application specific code ...    
 	// e.g. reduce SMPS output voltage, store important MCU data in EEPROM/Flash   	
 	// add failure entry
-	AddToFailureMemory(OVERTEMP_WARNING);  
+	AddToTJA1145FD_FailureMemory(CanTrcvIndex, OVERTEMP_WARNING);  
 
 	// Clear OTW Event flag
-	if (TJA1145FD_setSystemEventStatus(TJA1145FD_PO_NO_POWER_ON, TJA1145FD_OTW_TEMPERATURE_EXCEEDS_WARNING_LEVEL, TJA1145FD_SPIF_NO_SPI_FAILURE) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setSystemEventStatus(CanTrcvIndex, TJA1145FD_PO_NO_POWER_ON, TJA1145FD_OTW_TEMPERATURE_EXCEEDS_WARNING_LEVEL, TJA1145FD_SPIF_NO_SPI_FAILURE) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}       
 
@@ -1211,16 +1209,16 @@ StdReturn_t TJA1145_OTW_ServiceRoutine(){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_PO_ServiceRoutine(){
+StdReturn_t TJA1145_PO_ServiceRoutine(Byte CanTrcvIndex){
 	StdReturn_t ret = E_OK;
 
 	// init TJA1145
-	(void) InitTJA1145();
+	(void) InitTJA1145(CanTrcvIndex);
 
 	// application specific code ...
 
 	// Clear POS Event flag
-	if (TJA1145FD_setSystemEventStatus(TJA1145FD_PO_OFF_MODE_LEFT, TJA1145FD_OTW_NO_OVER_TEMPERATURE, TJA1145FD_SPIF_NO_SPI_FAILURE) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setSystemEventStatus(CanTrcvIndex, TJA1145FD_PO_OFF_MODE_LEFT, TJA1145FD_OTW_NO_OVER_TEMPERATURE, TJA1145FD_SPIF_NO_SPI_FAILURE) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}    
 
@@ -1239,14 +1237,14 @@ StdReturn_t TJA1145_PO_ServiceRoutine(){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_PNFDE_ServiceRoutine(){
+StdReturn_t TJA1145_PNFDE_ServiceRoutine(Byte CanTrcvIndex){
 	StdReturn_t ret = E_OK;
 
 	// reconfigure Partial Networking
-	(void) AddTaskToScheduler(CFG_PARTIAL_NETWORKING);
+	(void) AddTaskToScheduler(CanTrcvIndex, CFG_PARTIAL_NETWORKING);
 
 	// Clear PNFDE bit
-	if (TJA1145FD_setTransceiverEventStatus(TJA1145FD_PNFDE_PARTIAL_NETWORK_FRAME_ERROR_DETECTED, TJA1145FD_CBS_CAN_BUS_ACTIVE, TJA1145FD_CF_NO_CAN_FAILURE, TJA1145FD_CW_NO_CAN_WAKEUP) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setTransceiverEventStatus(CanTrcvIndex, TJA1145FD_PNFDE_PARTIAL_NETWORK_FRAME_ERROR_DETECTED, TJA1145FD_CBS_CAN_BUS_ACTIVE, TJA1145FD_CF_NO_CAN_FAILURE, TJA1145FD_CW_NO_CAN_WAKEUP) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	} 
 
@@ -1265,30 +1263,30 @@ StdReturn_t TJA1145_PNFDE_ServiceRoutine(){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_CW_ServiceRoutine(){
+StdReturn_t TJA1145_CW_ServiceRoutine(Byte CanTrcvIndex){
 	StdReturn_t ret = E_OK;
 	TJA1145FD_CAN_Control_Reg_t canCtrl;
 	TJA1145FD_Transceiver_Status_Reg_t trcvStatus;	
 
 	// read CAN ControlRegister
-	if (TJA1145FD_getCANControl(&canCtrl.TJA1145FD_CFDC, &canCtrl.TJA1145FD_PNCOK, &canCtrl.TJA1145FD_CPNC, &canCtrl.TJA1145FD_CMC) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_getCANControl(CanTrcvIndex, &canCtrl.TJA1145FD_CFDC, &canCtrl.TJA1145FD_PNCOK, &canCtrl.TJA1145FD_CPNC, &canCtrl.TJA1145FD_CMC) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK; 
 	}
 
-	if (TJA1145FD_getTransceiverStatus(&trcvStatus.TJA1145FD_CTS, &trcvStatus.TJA1145FD_CPNERR, &trcvStatus.TJA1145FD_CPNS, &trcvStatus.TJA1145FD_COSCS, &trcvStatus.TJA1145FD_CBSS, &trcvStatus.TJA1145FD_VCS, &trcvStatus.TJA1145FD_CFS) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_getTransceiverStatus(CanTrcvIndex, &trcvStatus.TJA1145FD_CTS, &trcvStatus.TJA1145FD_CPNERR, &trcvStatus.TJA1145FD_CPNS, &trcvStatus.TJA1145FD_COSCS, &trcvStatus.TJA1145FD_CBSS, &trcvStatus.TJA1145FD_VCS, &trcvStatus.TJA1145FD_CFS) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK; 
 	}                          	
 
 	// if CPNC == 1 --> wake via WUF 
 	// if CPNC == 0 -> wake via WUP 
 	if (canCtrl.TJA1145FD_CPNC == TJA1145FD_CPNC_CAN_SELECTIVE_WAKEUP_ENABLE ){
-		WuReason = CANTRCV_WU_BY_BUS_WUF;
+		TJA1145FD_WuReason[CanTrcvIndex] = CANTRCV_WU_BY_BUS_WUF;
 	} else {
-		WuReason = CANTRCV_WU_BY_BUS_WUP;
+		TJA1145FD_WuReason[CanTrcvIndex] = CANTRCV_WU_BY_BUS_WUP;
 	}   
 
 	// Clear CW Event flag
-	if (TJA1145FD_setTransceiverEventStatus(TJA1145FD_PNFDE_NO_PARTIAL_NETWORK_FRAME_ERROR, TJA1145FD_CBS_CAN_BUS_ACTIVE, TJA1145FD_CF_NO_CAN_FAILURE, TJA1145FD_CW_CAN_WAKEUP_EVENT) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setTransceiverEventStatus(CanTrcvIndex, TJA1145FD_PNFDE_NO_PARTIAL_NETWORK_FRAME_ERROR, TJA1145FD_CBS_CAN_BUS_ACTIVE, TJA1145FD_CF_NO_CAN_FAILURE, TJA1145FD_CW_CAN_WAKEUP_EVENT) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;        	
 	}    
 
@@ -1309,26 +1307,26 @@ StdReturn_t TJA1145_CW_ServiceRoutine(){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_CF_ServiceRoutine(){
+StdReturn_t TJA1145_CF_ServiceRoutine(Byte CanTrcvIndex){
 	StdReturn_t ret = E_OK;
 	TJA1145FD_Transceiver_Status_Reg_t trcvStatus;
 
 	// application specific actions ...
-	AddToFailureMemory(CAN_FAILURE);           
+	AddToTJA1145FD_FailureMemory(CanTrcvIndex, CAN_FAILURE);           
 
 	// Clear CF Event flag
-	if (TJA1145FD_setTransceiverEventStatus(TJA1145FD_PNFDE_NO_PARTIAL_NETWORK_FRAME_ERROR, TJA1145FD_CBS_CAN_BUS_ACTIVE, TJA1145FD_CF_CAN_FAILURE_DETECTED, TJA1145FD_CW_NO_CAN_WAKEUP) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setTransceiverEventStatus(CanTrcvIndex, TJA1145FD_PNFDE_NO_PARTIAL_NETWORK_FRAME_ERROR, TJA1145FD_CBS_CAN_BUS_ACTIVE, TJA1145FD_CF_CAN_FAILURE_DETECTED, TJA1145FD_CW_NO_CAN_WAKEUP) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}  
 
-	(void) TJA1145FD_getTransceiverStatus(&trcvStatus.TJA1145FD_CTS, &trcvStatus.TJA1145FD_CPNERR, &trcvStatus.TJA1145FD_CPNS, &trcvStatus.TJA1145FD_COSCS, &trcvStatus.TJA1145FD_CBSS, &trcvStatus.TJA1145FD_VCS, &trcvStatus.TJA1145FD_CFS);
+	(void) TJA1145FD_getTransceiverStatus(CanTrcvIndex, &trcvStatus.TJA1145FD_CTS, &trcvStatus.TJA1145FD_CPNERR, &trcvStatus.TJA1145FD_CPNS, &trcvStatus.TJA1145FD_COSCS, &trcvStatus.TJA1145FD_CBSS, &trcvStatus.TJA1145FD_VCS, &trcvStatus.TJA1145FD_CFS);
 	if((trcvStatus.TJA1145FD_CFS != TJA1145FD_CFS_NO_TXD_TIMEOUT_EVENT) || (trcvStatus.TJA1145FD_VCS != TJA1145FD_VCS_OUTPUT_VOLTAGE_ON_V1_IS_ABOVE_THE_90_THRESHOLD) || (trcvStatus.TJA1145FD_CTS != TJA1145FD_CTS_CAN_TRANSMITTER_READY_TO_TRANSMIT_DATA)){
 		// Stop CAN transmission
-		(void) StopCAN_TX();
+		(void) StopCAN_TX(CanTrcvIndex);
 		// Stop CAN PE
-		(void) CANStopMode();
+		(void) CANStopMode(CanTrcvIndex);
 		// schedule Poll transceiver failure status to reactivate CAN again if failures are gone
-		CheckTrcvStatus = TRUE;  
+		TJA1145FD_CheckTrcvStatus[CanTrcvIndex] = TRUE;  
 	}
 
 	return ret;
@@ -1349,13 +1347,13 @@ StdReturn_t TJA1145_CF_ServiceRoutine(){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_CBS_ServiceRoutine() {
+StdReturn_t TJA1145_CBS_ServiceRoutine(Byte CanTrcvIndex) {
 	StdReturn_t ret = E_OK;  
 
 	// application specific actions ...
 
 	// Clear CBS Event flag
-	(void) TJA1145_ClearTrcvTimeoutFlag();
+	(void) TJA1145_ClearTrcvTimeoutFlag(CanTrcvIndex);
 
 	return ret;
 }
@@ -1371,13 +1369,13 @@ StdReturn_t TJA1145_CBS_ServiceRoutine() {
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_WPR_ServiceRoutine(){
+StdReturn_t TJA1145_WPR_ServiceRoutine(Byte CanTrcvIndex){
 	StdReturn_t ret = E_OK;
 
 	// application specific actions ...
 
 	// Clear WPR bit	
-	if (TJA1145FD_setWakePinEvent(TJA1145FD_WPR_WAKEPIN_RISING_EDGE_DETECTED, TJA1145FD_WPF_NO_WAKEPIN_FALLING_EDGE)  != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setWakePinEvent(CanTrcvIndex, TJA1145FD_WPR_WAKEPIN_RISING_EDGE_DETECTED, TJA1145FD_WPF_NO_WAKEPIN_FALLING_EDGE)  != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
 
@@ -1395,13 +1393,13 @@ StdReturn_t TJA1145_WPR_ServiceRoutine(){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_WPF_ServiceRoutine(){
+StdReturn_t TJA1145_WPF_ServiceRoutine(Byte CanTrcvIndex){
 	StdReturn_t ret = E_OK;
 
 	// application specific actions ...
 
 	// Clear WPF bit
-	if (TJA1145FD_setWakePinEvent(TJA1145FD_WPR_NO_WAKEPIN_RISING_EDGE, TJA1145FD_WPF_WAKEPIN_FALLING_EDGE_DETECTED)  != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setWakePinEvent(CanTrcvIndex, TJA1145FD_WPR_NO_WAKEPIN_RISING_EDGE, TJA1145FD_WPF_WAKEPIN_FALLING_EDGE_DETECTED)  != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
 
@@ -1416,10 +1414,10 @@ StdReturn_t TJA1145_WPF_ServiceRoutine(){
 * \version	1.0
 * \date     2013/06/05	
 */
-void RXDLow_ISR(void)
+void RXDLow_ISR(Byte CanTrcvIndex)
 {
 	// Signal that an event is pending
-	PendingEvent = TRUE;
+	TJA1145FD_PendingEvent[CanTrcvIndex] = TRUE;
 }
 
 
@@ -1431,11 +1429,11 @@ void RXDLow_ISR(void)
 * \version	1.0
 * \date     2013/06/05		  
 */
-void Timer_ISR(void)
+void Timer_ISR(Byte CanTrcvIndex)
 {	
 	// If startup operation is finished, scheduler is called    
-	if (StartupReady == TRUE){  
-		SchedulerOnTimerOverflow();
+	if (TJA1145FD_StartupReady[CanTrcvIndex] == TRUE){  
+		SchedulerOnTimerOverflow(CanTrcvIndex);
 	}	 
 }
 
@@ -1449,8 +1447,8 @@ void Timer_ISR(void)
 * \version  1.0 
 * \date     2013/06/05
 */
-void StopCAN_TX(void){
-	(void) AbortTransmissionCAN();
+void StopCAN_TX(Byte CanTrcvIndex){
+	(void) AbortTransmissionCAN(CanTrcvIndex);
 }
 
 
@@ -1461,8 +1459,8 @@ void StopCAN_TX(void){
 * \version  1.0
 * \date     2013/06/05   
 */
-void ResumeCAN_TX(void){
-	(void) EnableTransmissionCAN();
+void ResumeCAN_TX(Byte CanTrcvIndex){
+	(void) EnableTransmissionCAN(CanTrcvIndex);
 }
 
 
@@ -1474,8 +1472,8 @@ void ResumeCAN_TX(void){
 * \date     2013/06/05 
 * \return   Byte  
 */
-Byte EnterFlashOperation(void) {
-	return FlashProgramming();
+Byte EnterFlashOperation(Byte CanTrcvIndex) {
+	return FlashProgramming(CanTrcvIndex);
 }
 
 
@@ -1487,10 +1485,10 @@ Byte EnterFlashOperation(void) {
 * \date     2013/06/05	
 * \param    data: Data to be written to failure memory     	  
 */
-void AddToFailureMemory(FailureEntry_t data){
-	FailureMemory[FailMemPt_write] = data;
-	if (FailMemPt_write < (MAXERRENTR-1)){
-		FailMemPt_write = (FailMemPt_write+1) % MAXERRENTR;
+void AddToTJA1145FD_FailureMemory(Byte CanTrcvIndex, FailureEntry_t data){
+	TJA1145FD_FailureMemory[CanTrcvIndex][TJA1145FD_FailMemPt_write[CanTrcvIndex]] = data;
+	if (TJA1145FD_FailMemPt_write[CanTrcvIndex] < (MAXERRENTR-1)){
+		TJA1145FD_FailMemPt_write[CanTrcvIndex] = (TJA1145FD_FailMemPt_write[CanTrcvIndex]+1) % MAXERRENTR;
 	}     
 }            
 
@@ -1503,13 +1501,13 @@ void AddToFailureMemory(FailureEntry_t data){
 * \version	1.0 
 * \date     2013/06/05		  
 */
-void InitScheduler(){
+void InitScheduler(Byte CanTrcvIndex){
 	int i;
 
-	ApplTaskPt_read = 0;
-	ApplTaskPt_write = 0;
+	TJA1145FD_ApplTaskPt_read[CanTrcvIndex] = 0;
+	TJA1145FD_ApplTaskPt_write[CanTrcvIndex] = 0;
 	for(i = 0; i < MAXTASKNO; i++){
-		ApplTask[i] = NO_OPERATION;
+		TJA1145FD_ApplTask[CanTrcvIndex][i] = NO_OPERATION;
 	}
 }
 
@@ -1525,18 +1523,17 @@ void InitScheduler(){
 *                 possible values: NO_OPERATION, CHANGE_TO_SLEEP, CHANGE_TO_STANDBY, CHANGE_TO_NORMAL, EVENT_HANDLING, 
 *                                  TRIGGER_WATCHDOG, POLL_TRCV_STATUS, POLL_GLOBAL_WAKE, PORT_SUPERVISION, HVIO_SUPERVISION 
 */
-void AddTaskToScheduler(PendingTask_t task){
-	StdReturn_t ret = E_OK;       
+void AddTaskToScheduler(Byte CanTrcvIndex, PendingTask_t task){
 
 	__DI();  
 	// If queue is not full, add new task to queue
-	if(ApplTask[ApplTaskPt_write] == NO_OPERATION) {
-		ApplTask[ApplTaskPt_write] = task;
-		ApplTaskPt_write = (ApplTaskPt_write+1) % MAXTASKNO;
+	if(TJA1145FD_ApplTask[CanTrcvIndex][TJA1145FD_ApplTaskPt_write[CanTrcvIndex]] == NO_OPERATION) {
+		TJA1145FD_ApplTask[CanTrcvIndex][TJA1145FD_ApplTaskPt_write[CanTrcvIndex]] = task;
+		TJA1145FD_ApplTaskPt_write[CanTrcvIndex] = (TJA1145FD_ApplTaskPt_write[CanTrcvIndex]+1) % MAXTASKNO;
 
 	} else {
-		//AddToFailureMemory(task);
-		AddToFailureMemory(BUFFER_OVERFLOW);
+		//AddToTJA1145FD_FailureMemory(task);
+		AddToTJA1145FD_FailureMemory(CanTrcvIndex, BUFFER_OVERFLOW);
 	}       	
 	__EI();
 }
@@ -1551,18 +1548,18 @@ void AddTaskToScheduler(PendingTask_t task){
 * \date     2013/06/05		  
 * \return   PendingTask_t  Task that should be handled next 
 */    
-PendingTask_t GetNextTask(void){
+PendingTask_t GetNextTask(Byte CanTrcvIndex){
 	PendingTask_t ret;
 
 	__DI();	
-	ret = ApplTask[ApplTaskPt_read];
-	if (ApplTask[ApplTaskPt_read] != NO_OPERATION){
+	ret = TJA1145FD_ApplTask[CanTrcvIndex][TJA1145FD_ApplTaskPt_read[CanTrcvIndex]];
+	if (TJA1145FD_ApplTask[CanTrcvIndex][TJA1145FD_ApplTaskPt_read[CanTrcvIndex]] != NO_OPERATION){
 		// clear handled entry
-		ApplTask[ApplTaskPt_read] = NO_OPERATION;
+		TJA1145FD_ApplTask[CanTrcvIndex][TJA1145FD_ApplTaskPt_read[CanTrcvIndex]] = NO_OPERATION;
 		// increment read pointer
-		ApplTaskPt_read++;
-		if (ApplTaskPt_read == MAXTASKNO){
-			ApplTaskPt_read = 0;
+		TJA1145FD_ApplTaskPt_read[CanTrcvIndex]++;
+		if (TJA1145FD_ApplTaskPt_read[CanTrcvIndex] == MAXTASKNO){
+			TJA1145FD_ApplTaskPt_read[CanTrcvIndex] = 0;
 		} 
 	}
 	__EI();
@@ -1586,10 +1583,10 @@ PendingTask_t GetNextTask(void){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_GetWuReason(CanTrcv_TrcvWakeupReasonType* pReason) {
+StdReturn_t TJA1145_GetWuReason(Byte CanTrcvIndex, CanTrcv_TrcvWakeupReasonType* pReason) {
 	StdReturn_t ret = E_OK;
 
-	*pReason = WuReason;
+	*pReason = TJA1145FD_WuReason[CanTrcvIndex];
 
 	return ret;
 }
@@ -1607,15 +1604,15 @@ StdReturn_t TJA1145_GetWuReason(CanTrcv_TrcvWakeupReasonType* pReason) {
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_ClearTrcvWufFlag(){
+StdReturn_t TJA1145_ClearTrcvWufFlag(Byte CanTrcvIndex){
 	StdReturn_t ret = E_OK;
 	TJA1145FD_CAN_Control_Reg_t canCtrl;
 	TJA1145FD_Transceiver_Event_Status_Reg_t trcvEv;     	
 
-	if (TJA1145FD_getCANControl(&canCtrl.TJA1145FD_CFDC, &canCtrl.TJA1145FD_PNCOK, &canCtrl.TJA1145FD_CPNC, &canCtrl.TJA1145FD_CMC) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_getCANControl(CanTrcvIndex, &canCtrl.TJA1145FD_CFDC, &canCtrl.TJA1145FD_PNCOK, &canCtrl.TJA1145FD_CPNC, &canCtrl.TJA1145FD_CMC) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
-	if (TJA1145FD_getTransceiverEventStatus(&trcvEv.TJA1145FD_PNFDE, &trcvEv.TJA1145FD_CBS, &trcvEv.TJA1145FD_CF, &trcvEv.TJA1145FD_CW) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_getTransceiverEventStatus(CanTrcvIndex, &trcvEv.TJA1145FD_PNFDE, &trcvEv.TJA1145FD_CBS, &trcvEv.TJA1145FD_CF, &trcvEv.TJA1145FD_CW) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	} 
 
@@ -1624,7 +1621,7 @@ StdReturn_t TJA1145_ClearTrcvWufFlag(){
 	if ((canCtrl.TJA1145FD_CPNC == TJA1145FD_CPNC_CAN_SELECTIVE_WAKEUP_ENABLE) &&
 		(trcvEv.TJA1145FD_PNFDE == TJA1145FD_PNFDE_NO_PARTIAL_NETWORK_FRAME_ERROR && canCtrl.TJA1145FD_PNCOK == TJA1145FD_PNCOK_PARTIAL_NETWORK_CONFIGURATION_SUCCESSFUL) && 
 		(trcvEv.TJA1145FD_CW == TJA1145FD_CW_CAN_WAKEUP_EVENT)) {
-			if (TJA1145FD_setTransceiverEventStatus(TJA1145FD_PNFDE_NO_PARTIAL_NETWORK_FRAME_ERROR, TJA1145FD_CBS_CAN_BUS_ACTIVE, TJA1145FD_CF_NO_CAN_FAILURE, TJA1145FD_CW_CAN_WAKEUP_EVENT) != NXP_UJA11XX_SUCCESS){
+			if (TJA1145FD_setTransceiverEventStatus(CanTrcvIndex, TJA1145FD_PNFDE_NO_PARTIAL_NETWORK_FRAME_ERROR, TJA1145FD_CBS_CAN_BUS_ACTIVE, TJA1145FD_CF_NO_CAN_FAILURE, TJA1145FD_CW_CAN_WAKEUP_EVENT) != NXP_UJA11XX_SUCCESS){
 				ret = E_NOT_OK;
 			}
 	} 
@@ -1647,11 +1644,11 @@ StdReturn_t TJA1145_ClearTrcvWufFlag(){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_ReadTrcvTimeoutFlag(TJA1145FD_CAN_Bus_Active_t* pCbs){
+StdReturn_t TJA1145_ReadTrcvTimeoutFlag(Byte CanTrcvIndex, TJA1145FD_CAN_Bus_Active_t* pCbs){
 	StdReturn_t ret = E_OK;    
 	TJA1145FD_Transceiver_Event_Status_Reg_t trcvEv;
 
-	if (TJA1145FD_getTransceiverEventStatus(&trcvEv.TJA1145FD_PNFDE, &trcvEv.TJA1145FD_CBS, &trcvEv.TJA1145FD_CF, &trcvEv.TJA1145FD_CW) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_getTransceiverEventStatus(CanTrcvIndex, &trcvEv.TJA1145FD_PNFDE, &trcvEv.TJA1145FD_CBS, &trcvEv.TJA1145FD_CF, &trcvEv.TJA1145FD_CW) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
 	*pCbs = trcvEv.TJA1145FD_CBS;
@@ -1673,14 +1670,14 @@ StdReturn_t TJA1145_ReadTrcvTimeoutFlag(TJA1145FD_CAN_Bus_Active_t* pCbs){
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_ClearTrcvTimeoutFlag() {
+StdReturn_t TJA1145_ClearTrcvTimeoutFlag(Byte CanTrcvIndex) {
 	StdReturn_t ret = E_OK;
 	TJA1145FD_Transceiver_Event_Status_Reg_t trcvEv;
 
-	if (TJA1145FD_getTransceiverEventStatus(&trcvEv.TJA1145FD_PNFDE, &trcvEv.TJA1145FD_CBS, &trcvEv.TJA1145FD_CF, &trcvEv.TJA1145FD_CW) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_getTransceiverEventStatus(CanTrcvIndex, &trcvEv.TJA1145FD_PNFDE, &trcvEv.TJA1145FD_CBS, &trcvEv.TJA1145FD_CF, &trcvEv.TJA1145FD_CW) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
-	if (TJA1145FD_setTransceiverEventStatus(trcvEv.TJA1145FD_PNFDE, TJA1145FD_CBSS_CAN_BUS_INACTIVE, trcvEv.TJA1145FD_CF, trcvEv.TJA1145FD_CW) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_setTransceiverEventStatus(CanTrcvIndex, trcvEv.TJA1145FD_PNFDE, TJA1145FD_CBS_NO_CAN_BUS_ACTIVITY, trcvEv.TJA1145FD_CF, trcvEv.TJA1145FD_CW) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
 
@@ -1701,11 +1698,11 @@ StdReturn_t TJA1145_ClearTrcvTimeoutFlag() {
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_ReadTrcvSilenceFlag(TJA1145FD_CAN_Bus_Status_t* pCbss) {
+StdReturn_t TJA1145_ReadTrcvSilenceFlag(Byte CanTrcvIndex,TJA1145FD_CAN_Bus_Status_t* pCbss) {
 	StdReturn_t ret = E_OK;      
 	TJA1145FD_Transceiver_Status_Reg_t trcvSt;
 
-	if (TJA1145FD_getTransceiverStatus(&trcvSt.TJA1145FD_CTS, &trcvSt.TJA1145FD_CPNERR, &trcvSt.TJA1145FD_CPNS, &trcvSt.TJA1145FD_COSCS, &trcvSt.TJA1145FD_CBSS, &trcvSt.TJA1145FD_VCS, &trcvSt.TJA1145FD_CFS) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_getTransceiverStatus(CanTrcvIndex, &trcvSt.TJA1145FD_CTS, &trcvSt.TJA1145FD_CPNERR, &trcvSt.TJA1145FD_CPNS, &trcvSt.TJA1145FD_COSCS, &trcvSt.TJA1145FD_CBSS, &trcvSt.TJA1145FD_VCS, &trcvSt.TJA1145FD_CFS) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
 	*pCbss = trcvSt.TJA1145FD_CBSS;
@@ -1731,11 +1728,11 @@ StdReturn_t TJA1145_ReadTrcvSilenceFlag(TJA1145FD_CAN_Bus_Status_t* pCbss) {
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_CheckWakeFlag(){
+StdReturn_t TJA1145_CheckWakeFlag(Byte CanTrcvIndex){
 	StdReturn_t ret = E_OK;
 	TJA1145FD_Global_Event_Status_Reg_t ev;
 
-	if (TJA1145FD_getGlobalEventStatus(&ev.TJA1145FD_WPE, &ev.TJA1145FD_TRXE, &ev.TJA1145FD_SYSE) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_getGlobalEventStatus(CanTrcvIndex, &ev.TJA1145FD_WPE, &ev.TJA1145FD_TRXE, &ev.TJA1145FD_SYSE) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
 
@@ -1745,7 +1742,7 @@ StdReturn_t TJA1145_CheckWakeFlag(){
 			ret = E_NOT_OK;
 	}
 
-	return E_OK;
+	return ret;
 }
 
 
@@ -1759,20 +1756,20 @@ StdReturn_t TJA1145_CheckWakeFlag(){
 * \return	  <b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_SetPNActivationState(CanTrcv_PNActivationType actState) {
+StdReturn_t TJA1145_SetPNActivationState(Byte CanTrcvIndex, CanTrcv_PNActivationType actState) {
 	StdReturn_t ret = E_OK;
 	TJA1145FD_CAN_Control_Reg_t canCtrl;  	
 
-	if (TJA1145FD_getCANControl(&canCtrl.TJA1145FD_CFDC, &canCtrl.TJA1145FD_PNCOK, &canCtrl.TJA1145FD_CPNC, &canCtrl.TJA1145FD_CMC) != NXP_UJA11XX_SUCCESS){
+	if (TJA1145FD_getCANControl(CanTrcvIndex, &canCtrl.TJA1145FD_CFDC, &canCtrl.TJA1145FD_PNCOK, &canCtrl.TJA1145FD_CPNC, &canCtrl.TJA1145FD_CMC) != NXP_UJA11XX_SUCCESS){
 		ret = E_NOT_OK;
 	}
 
 	if (actState == PN_ENABLED){
-		if (TJA1145FD_setCANControl(canCtrl.TJA1145FD_CFDC, canCtrl.TJA1145FD_PNCOK, TJA1145FD_CPNC_CAN_SELECTIVE_WAKEUP_ENABLE, canCtrl.TJA1145FD_CMC) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setCANControl(CanTrcvIndex, canCtrl.TJA1145FD_CFDC, canCtrl.TJA1145FD_PNCOK, TJA1145FD_CPNC_CAN_SELECTIVE_WAKEUP_ENABLE, canCtrl.TJA1145FD_CMC) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK;
 		}     
 	} else {
-		if (TJA1145FD_setCANControl(canCtrl.TJA1145FD_CFDC, canCtrl.TJA1145FD_PNCOK, TJA1145FD_CPNC_CAN_SELECTIVE_WAKEUP_DISABLE, canCtrl.TJA1145FD_CMC) != NXP_UJA11XX_SUCCESS){
+		if (TJA1145FD_setCANControl(CanTrcvIndex, canCtrl.TJA1145FD_CFDC, canCtrl.TJA1145FD_PNCOK, TJA1145FD_CPNC_CAN_SELECTIVE_WAKEUP_DISABLE, canCtrl.TJA1145FD_CMC) != NXP_UJA11XX_SUCCESS){
 			ret = E_NOT_OK;
 		} 
 	}
@@ -1791,11 +1788,11 @@ StdReturn_t TJA1145_SetPNActivationState(CanTrcv_PNActivationType actState) {
 * \return	<b>StdReturn_t</b>  Function executed successfully or not
 *                               possible values: E_OK, E_NOT_OK
 */
-StdReturn_t TJA1145_GetOpMode(CanTrcv_TrcvModeType* pMode){
+StdReturn_t TJA1145_GetOpMode(Byte CanTrcvIndex, CanTrcv_TrcvModeType* pMode){
 	StdReturn_t ret = E_OK;
 	TJA1145FD_Mode_Control_t mc;       
 
-	if (TJA1145FD_getModeControlReg(&mc) != NXP_UJA11XX_SUCCESS) {
+	if (TJA1145FD_getModeControlReg(CanTrcvIndex, &mc) != NXP_UJA11XX_SUCCESS) {
 		ret = E_NOT_OK;
 	}
 
@@ -1822,22 +1819,22 @@ StdReturn_t TJA1145_GetOpMode(CanTrcv_TrcvModeType* pMode){
 *                               possible values: E_OK, E_NOT_OK
 
 */
-StdReturn_t TJA1145_SetOpMode(CanTrcv_TrcvModeType mode){
+StdReturn_t TJA1145_SetOpMode(Byte CanTrcvIndex, CanTrcv_TrcvModeType mode){
 	StdReturn_t ret = E_OK;
 
 	switch (mode) {
 	  case (CANTRCV_TRCVMODE_SLEEP):
-		  if (TJA1145FD_setModeControlReg(TJA1145FD_MC_SLEEP_MODE) != NXP_UJA11XX_SUCCESS){
+		  if (TJA1145FD_setModeControlReg(CanTrcvIndex, TJA1145FD_MC_SLEEP_MODE) != NXP_UJA11XX_SUCCESS){
 			  ret = E_NOT_OK;
 		  }
 		  break;
 	  case (CANTRCV_TRCVMODE_STANDBY):
-		  if (TJA1145FD_setModeControlReg(TJA1145FD_MC_STANDBY_MODE) != NXP_UJA11XX_SUCCESS){
+		  if (TJA1145FD_setModeControlReg(CanTrcvIndex, TJA1145FD_MC_STANDBY_MODE) != NXP_UJA11XX_SUCCESS){
 			  ret = E_NOT_OK;
 		  }
 		  break;
 	  default:
-		  if (TJA1145FD_setModeControlReg(TJA1145FD_MC_NORMAL_MODE) != NXP_UJA11XX_SUCCESS){
+		  if (TJA1145FD_setModeControlReg(CanTrcvIndex, TJA1145FD_MC_NORMAL_MODE) != NXP_UJA11XX_SUCCESS){
 			  ret = E_NOT_OK;
 		  }
 		  break;         

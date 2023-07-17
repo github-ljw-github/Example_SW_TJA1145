@@ -802,108 +802,108 @@ typedef enum
 // function prototypes
 //--------------------------------------------------------------------------------
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getModeControlReg(TJA1145FD_Mode_Control_t* penMC );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setModeControlReg(TJA1145FD_Mode_Control_t enMC );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getModeControlReg(Byte CanTrcvIndex, TJA1145FD_Mode_Control_t* penMC );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setModeControlReg(Byte CanTrcvIndex, TJA1145FD_Mode_Control_t enMC );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getMainStatus(TJA1145FD_Forced_Sleep_Mode_Status_t* penFSMS, TJA1145FD_Over_Temperature_Warning_Status_t* penOTWS, TJA1145FD_Normal_Mode_Status_t* penNMS );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getMainStatus(Byte CanTrcvIndex, TJA1145FD_Forced_Sleep_Mode_Status_t* penFSMS, TJA1145FD_Over_Temperature_Warning_Status_t* penOTWS, TJA1145FD_Normal_Mode_Status_t* penNMS );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getSystemEventEnable(TJA1145FD_Over_Temperature_Warning_Enable_t* penOTWE, TJA1145FD_SPI_Failure_Detect_Enable_t* penSPIFE );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setSystemEventEnable(TJA1145FD_Over_Temperature_Warning_Enable_t enOTWE, TJA1145FD_SPI_Failure_Detect_Enable_t enSPIFE );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getSystemEventEnable(Byte CanTrcvIndex, TJA1145FD_Over_Temperature_Warning_Enable_t* penOTWE, TJA1145FD_SPI_Failure_Detect_Enable_t* penSPIFE );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setSystemEventEnable(Byte CanTrcvIndex, TJA1145FD_Over_Temperature_Warning_Enable_t enOTWE, TJA1145FD_SPI_Failure_Detect_Enable_t enSPIFE );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getMemory0(TJA1145FD_RAM_Memory_0700_t* penGPM0 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setMemory0(TJA1145FD_RAM_Memory_0700_t enGPM0 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getMemory0(Byte CanTrcvIndex, TJA1145FD_RAM_Memory_0700_t* penGPM0 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setMemory0(Byte CanTrcvIndex, TJA1145FD_RAM_Memory_0700_t enGPM0 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getMemory1(TJA1145FD_RAM_Memory_0815_t* penGPM1 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setMemory1(TJA1145FD_RAM_Memory_0815_t enGPM1 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getMemory1(Byte CanTrcvIndex, TJA1145FD_RAM_Memory_0815_t* penGPM1 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setMemory1(Byte CanTrcvIndex, TJA1145FD_RAM_Memory_0815_t enGPM1 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getMemory2(TJA1145FD_RAM_Memory_1623_t* penGPM2 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setMemory2(TJA1145FD_RAM_Memory_1623_t enGPM2 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getMemory2(Byte CanTrcvIndex, TJA1145FD_RAM_Memory_1623_t* penGPM2 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setMemory2(Byte CanTrcvIndex, TJA1145FD_RAM_Memory_1623_t enGPM2 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getMemory3(TJA1145FD_RAM_Memory_2431_t* penGPM3 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setMemory3(TJA1145FD_RAM_Memory_2431_t enGPM3 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getMemory3(Byte CanTrcvIndex, TJA1145FD_RAM_Memory_2431_t* penGPM3 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setMemory3(Byte CanTrcvIndex, TJA1145FD_RAM_Memory_2431_t enGPM3 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getLockControl(TJA1145FD_Lock_Control_6_t* penLK6C, TJA1145FD_Lock_Control_5_t* penLK5C, TJA1145FD_Lock_Control_4_t* penLK4C, TJA1145FD_Lock_Control_3_t* penLK3C, TJA1145FD_Lock_Control_2_t* penLK2C, TJA1145FD_Lock_Control_1_t* penLK1C, TJA1145FD_Lock_Control_0_t* penLK0C );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setLockControl(TJA1145FD_Lock_Control_6_t enLK6C, TJA1145FD_Lock_Control_5_t enLK5C, TJA1145FD_Lock_Control_4_t enLK4C, TJA1145FD_Lock_Control_3_t enLK3C, TJA1145FD_Lock_Control_2_t enLK2C, TJA1145FD_Lock_Control_1_t enLK1C, TJA1145FD_Lock_Control_0_t enLK0C );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getLockControl(Byte CanTrcvIndex, TJA1145FD_Lock_Control_6_t* penLK6C, TJA1145FD_Lock_Control_5_t* penLK5C, TJA1145FD_Lock_Control_4_t* penLK4C, TJA1145FD_Lock_Control_3_t* penLK3C, TJA1145FD_Lock_Control_2_t* penLK2C, TJA1145FD_Lock_Control_1_t* penLK1C, TJA1145FD_Lock_Control_0_t* penLK0C );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setLockControl(Byte CanTrcvIndex, TJA1145FD_Lock_Control_6_t enLK6C, TJA1145FD_Lock_Control_5_t enLK5C, TJA1145FD_Lock_Control_4_t enLK4C, TJA1145FD_Lock_Control_3_t enLK3C, TJA1145FD_Lock_Control_2_t enLK2C, TJA1145FD_Lock_Control_1_t enLK1C, TJA1145FD_Lock_Control_0_t enLK0C );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getCANControl(TJA1145FD_CAN_FD_tolerance_t* penCFDC, TJA1145FD_Partial_Network_Config_t* penPNCOK, TJA1145FD_CAN_Selective_WakeUp_t* penCPNC, TJA1145FD_CAN_Mode_Selection_t* penCMC );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setCANControl(TJA1145FD_CAN_FD_tolerance_t enCFDC, TJA1145FD_Partial_Network_Config_t enPNCOK, TJA1145FD_CAN_Selective_WakeUp_t enCPNC, TJA1145FD_CAN_Mode_Selection_t enCMC );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getCANControl(Byte CanTrcvIndex, TJA1145FD_CAN_FD_tolerance_t* penCFDC, TJA1145FD_Partial_Network_Config_t* penPNCOK, TJA1145FD_CAN_Selective_WakeUp_t* penCPNC, TJA1145FD_CAN_Mode_Selection_t* penCMC );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setCANControl(Byte CanTrcvIndex, TJA1145FD_CAN_FD_tolerance_t enCFDC, TJA1145FD_Partial_Network_Config_t enPNCOK, TJA1145FD_CAN_Selective_WakeUp_t enCPNC, TJA1145FD_CAN_Mode_Selection_t enCMC );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getTransceiverStatus(TJA1145FD_CAN_Transmitter_Status_t* penCTS, TJA1145FD_Partial_Network_Error_t* penCPNERR, TJA1145FD_Partial_Network_Config_Error_t* penCPNS, TJA1145FD_Partial_Network_Osc_t* penCOSCS, TJA1145FD_CAN_Bus_Status_t* penCBSS, TJA1145FD_VCAN_Status_t* penVCS, TJA1145FD_Dominant_Timeout_Event_t* penCFS );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getTransceiverStatus(Byte CanTrcvIndex, TJA1145FD_CAN_Transmitter_Status_t* penCTS, TJA1145FD_Partial_Network_Error_t* penCPNERR, TJA1145FD_Partial_Network_Config_Error_t* penCPNS, TJA1145FD_Partial_Network_Osc_t* penCOSCS, TJA1145FD_CAN_Bus_Status_t* penCBSS, TJA1145FD_VCAN_Status_t* penVCS, TJA1145FD_Dominant_Timeout_Event_t* penCFS );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getTransceiverEventEnable(TJA1145FD_CAN_Bus_Silence_Detect_t* penCBSE, TJA1145FD_CAN_Failure_Detect_t* penCFE, TJA1145FD_CAN_WakeUp_Detect_t* penCWE );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setTransceiverEventEnable(TJA1145FD_CAN_Bus_Silence_Detect_t enCBSE, TJA1145FD_CAN_Failure_Detect_t enCFE, TJA1145FD_CAN_WakeUp_Detect_t enCWE );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getTransceiverEventEnable(Byte CanTrcvIndex, TJA1145FD_CAN_Bus_Silence_Detect_t* penCBSE, TJA1145FD_CAN_Failure_Detect_t* penCFE, TJA1145FD_CAN_WakeUp_Detect_t* penCWE );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setTransceiverEventEnable(Byte CanTrcvIndex, TJA1145FD_CAN_Bus_Silence_Detect_t enCBSE, TJA1145FD_CAN_Failure_Detect_t enCFE, TJA1145FD_CAN_WakeUp_Detect_t enCWE );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getDataRate(TJA1145FD_CAN_Data_Rate_t* penCDR );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setDataRate(TJA1145FD_CAN_Data_Rate_t enCDR );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getDataRate(Byte CanTrcvIndex, TJA1145FD_CAN_Data_Rate_t* penCDR );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setDataRate(Byte CanTrcvIndex, TJA1145FD_CAN_Data_Rate_t enCDR );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getCANIdentifier0(TJA1145FD_CAN_ID0700_t* penID0700 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setCANIdentifier0(TJA1145FD_CAN_ID0700_t enID0700 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getCANIdentifier0(Byte CanTrcvIndex, TJA1145FD_CAN_ID0700_t* penID0700 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setCANIdentifier0(Byte CanTrcvIndex, TJA1145FD_CAN_ID0700_t enID0700 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getCANIdentifier1(TJA1145FD_CAN_ID1508_t* penID1508 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setCANIdentifier1(TJA1145FD_CAN_ID1508_t enID1508 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getCANIdentifier1(Byte CanTrcvIndex, TJA1145FD_CAN_ID1508_t* penID1508 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setCANIdentifier1(Byte CanTrcvIndex, TJA1145FD_CAN_ID1508_t enID1508 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getCANIdentifier2(TJA1145FD_CAN_ID2318_t* penID2318, TJA1145FD_CAN_ID1716_t* penID1716 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setCANIdentifier2(TJA1145FD_CAN_ID2318_t enID2318, TJA1145FD_CAN_ID1716_t enID1716 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getCANIdentifier2(Byte CanTrcvIndex, TJA1145FD_CAN_ID2318_t* penID2318, TJA1145FD_CAN_ID1716_t* penID1716 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setCANIdentifier2(Byte CanTrcvIndex, TJA1145FD_CAN_ID2318_t enID2318, TJA1145FD_CAN_ID1716_t enID1716 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getCANIdentifier3(TJA1145FD_CAN_ID2824_t* penID2824 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setCANIdentifier3(TJA1145FD_CAN_ID2824_t enID2824 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getCANIdentifier3(Byte CanTrcvIndex, TJA1145FD_CAN_ID2824_t* penID2824 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setCANIdentifier3(Byte CanTrcvIndex, TJA1145FD_CAN_ID2824_t enID2824 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getCANMask0(TJA1145FD_CAN_M0700_t* penM0700 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setCANMask0(TJA1145FD_CAN_M0700_t enM0700 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getCANMask0(Byte CanTrcvIndex, TJA1145FD_CAN_M0700_t* penM0700 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setCANMask0(Byte CanTrcvIndex, TJA1145FD_CAN_M0700_t enM0700 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getCANMask1(TJA1145FD_CAN_M1508_t* penM1508 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setCANMask1(TJA1145FD_CAN_M1508_t enM1508 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getCANMask1(Byte CanTrcvIndex, TJA1145FD_CAN_M1508_t* penM1508 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setCANMask1(Byte CanTrcvIndex, TJA1145FD_CAN_M1508_t enM1508 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getCANMask2(TJA1145FD_CAN_M2318_t* penM2318, TJA1145FD_CAN_M1716_t* penM1716 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setCANMask2(TJA1145FD_CAN_M2318_t enM2318, TJA1145FD_CAN_M1716_t enM1716 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getCANMask2(Byte CanTrcvIndex, TJA1145FD_CAN_M2318_t* penM2318, TJA1145FD_CAN_M1716_t* penM1716 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setCANMask2(Byte CanTrcvIndex, TJA1145FD_CAN_M2318_t enM2318, TJA1145FD_CAN_M1716_t enM1716 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getCANMask3(TJA1145FD_CAN_M2824_t* penM2824 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setCANMask3(TJA1145FD_CAN_M2824_t enM2824 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getCANMask3(Byte CanTrcvIndex, TJA1145FD_CAN_M2824_t* penM2824 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setCANMask3(Byte CanTrcvIndex, TJA1145FD_CAN_M2824_t enM2824 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getFrameControl(TJA1145FD_Identifier_Format_t* penIDE, TJA1145FD_Partial_Network_Data_Mask_t* penPNDM, TJA1145FD_CAN_Data_Length_t* penDLC );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setFrameControl(TJA1145FD_Identifier_Format_t enIDE, TJA1145FD_Partial_Network_Data_Mask_t enPNDM, TJA1145FD_CAN_Data_Length_t enDLC );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getFrameControl(Byte CanTrcvIndex, TJA1145FD_Identifier_Format_t* penIDE, TJA1145FD_Partial_Network_Data_Mask_t* penPNDM, TJA1145FD_CAN_Data_Length_t* penDLC );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setFrameControl(Byte CanTrcvIndex, TJA1145FD_Identifier_Format_t enIDE, TJA1145FD_Partial_Network_Data_Mask_t enPNDM, TJA1145FD_CAN_Data_Length_t enDLC );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getWakeStatus(TJA1145FD_Wake_Pin_Status_t* penWPVS );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getWakeStatus(Byte CanTrcvIndex, TJA1145FD_Wake_Pin_Status_t* penWPVS );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getWakePinEnable(TJA1145FD_Wake_Pin_Rising_Edge_Detect_t* penWPRE, TJA1145FD_Wake_Pin_Falling_Edge_Detect_t* penWPFE );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setWakePinEnable(TJA1145FD_Wake_Pin_Rising_Edge_Detect_t enWPRE, TJA1145FD_Wake_Pin_Falling_Edge_Detect_t enWPFE );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getWakePinEnable(Byte CanTrcvIndex, TJA1145FD_Wake_Pin_Rising_Edge_Detect_t* penWPRE, TJA1145FD_Wake_Pin_Falling_Edge_Detect_t* penWPFE );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setWakePinEnable(Byte CanTrcvIndex, TJA1145FD_Wake_Pin_Rising_Edge_Detect_t enWPRE, TJA1145FD_Wake_Pin_Falling_Edge_Detect_t enWPFE );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getGlobalEventStatus(TJA1145FD_Wake_Pin_Event_t* penWPE, TJA1145FD_Transceiver_Event_t* penTRXE, TJA1145FD_System_Event_t* penSYSE );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getGlobalEventStatus(Byte CanTrcvIndex, TJA1145FD_Wake_Pin_Event_t* penWPE, TJA1145FD_Transceiver_Event_t* penTRXE, TJA1145FD_System_Event_t* penSYSE );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getSystemEventStatus(TJA1145FD_Power_On_t* penPO, TJA1145FD_Over_Temperature_Warning_t* penOTW, TJA1145FD_SPI_Failure_t* penSPIF );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setSystemEventStatus(TJA1145FD_Power_On_t enPO, TJA1145FD_Over_Temperature_Warning_t enOTW, TJA1145FD_SPI_Failure_t enSPIF );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getSystemEventStatus(Byte CanTrcvIndex, TJA1145FD_Power_On_t* penPO, TJA1145FD_Over_Temperature_Warning_t* penOTW, TJA1145FD_SPI_Failure_t* penSPIF );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setSystemEventStatus(Byte CanTrcvIndex, TJA1145FD_Power_On_t enPO, TJA1145FD_Over_Temperature_Warning_t enOTW, TJA1145FD_SPI_Failure_t enSPIF );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getTransceiverEventStatus(TJA1145FD_Partial_Network_Frame_Detect_t* penPNFDE, TJA1145FD_CAN_Bus_Active_t* penCBS, TJA1145FD_CAN_Failure_t* penCF, TJA1145FD_CAN_WakeUp_t* penCW );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setTransceiverEventStatus(TJA1145FD_Partial_Network_Frame_Detect_t enPNFDE, TJA1145FD_CAN_Bus_Active_t enCBS, TJA1145FD_CAN_Failure_t enCF, TJA1145FD_CAN_WakeUp_t enCW );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getTransceiverEventStatus(Byte CanTrcvIndex, TJA1145FD_Partial_Network_Frame_Detect_t* penPNFDE, TJA1145FD_CAN_Bus_Active_t* penCBS, TJA1145FD_CAN_Failure_t* penCF, TJA1145FD_CAN_WakeUp_t* penCW );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setTransceiverEventStatus(Byte CanTrcvIndex, TJA1145FD_Partial_Network_Frame_Detect_t enPNFDE, TJA1145FD_CAN_Bus_Active_t enCBS, TJA1145FD_CAN_Failure_t enCF, TJA1145FD_CAN_WakeUp_t enCW );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getWakePinEvent(TJA1145FD_Rising_Wake_Pin_Event_t* penWPR, TJA1145FD_Falling_Wake_Pin_Event_t* penWPF );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setWakePinEvent(TJA1145FD_Rising_Wake_Pin_Event_t enWPR, TJA1145FD_Falling_Wake_Pin_Event_t enWPF );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getWakePinEvent(Byte CanTrcvIndex, TJA1145FD_Rising_Wake_Pin_Event_t* penWPR, TJA1145FD_Falling_Wake_Pin_Event_t* penWPF );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setWakePinEvent(Byte CanTrcvIndex, TJA1145FD_Rising_Wake_Pin_Event_t enWPR, TJA1145FD_Falling_Wake_Pin_Event_t enWPF );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask0(TJA1145FD_Data_Mask_0_Config_t* penDM0 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask0(TJA1145FD_Data_Mask_0_Config_t enDM0 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask0(Byte CanTrcvIndex, TJA1145FD_Data_Mask_0_Config_t* penDM0 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask0(Byte CanTrcvIndex, TJA1145FD_Data_Mask_0_Config_t enDM0 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask1(TJA1145FD_Data_Mask_1_Config_t* penDM1 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask1(TJA1145FD_Data_Mask_1_Config_t enDM1 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask1(Byte CanTrcvIndex, TJA1145FD_Data_Mask_1_Config_t* penDM1 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask1(Byte CanTrcvIndex, TJA1145FD_Data_Mask_1_Config_t enDM1 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask2(TJA1145FD_Data_Mask_2_Config_t* penDM2 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask2(TJA1145FD_Data_Mask_2_Config_t enDM2 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask2(Byte CanTrcvIndex, TJA1145FD_Data_Mask_2_Config_t* penDM2 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask2(Byte CanTrcvIndex, TJA1145FD_Data_Mask_2_Config_t enDM2 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask3(TJA1145FD_Data_Mask_3_Config_t* penDM3 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask3(TJA1145FD_Data_Mask_3_Config_t enDM3 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask3(Byte CanTrcvIndex, TJA1145FD_Data_Mask_3_Config_t* penDM3 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask3(Byte CanTrcvIndex, TJA1145FD_Data_Mask_3_Config_t enDM3 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask4(TJA1145FD_Data_Mask_4_Config_t* penDM4 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask4(TJA1145FD_Data_Mask_4_Config_t enDM4 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask4(Byte CanTrcvIndex, TJA1145FD_Data_Mask_4_Config_t* penDM4 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask4(Byte CanTrcvIndex, TJA1145FD_Data_Mask_4_Config_t enDM4 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask5(TJA1145FD_Data_Mask_5_Config_t* penDM5 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask5(TJA1145FD_Data_Mask_5_Config_t enDM5 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask5(Byte CanTrcvIndex, TJA1145FD_Data_Mask_5_Config_t* penDM5 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask5(Byte CanTrcvIndex, TJA1145FD_Data_Mask_5_Config_t enDM5 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask6(TJA1145FD_Data_Mask_6_Config_t* penDM6 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask6(TJA1145FD_Data_Mask_6_Config_t enDM6 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask6(Byte CanTrcvIndex, TJA1145FD_Data_Mask_6_Config_t* penDM6 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask6(Byte CanTrcvIndex, TJA1145FD_Data_Mask_6_Config_t enDM6 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask7(TJA1145FD_Data_Mask_7_Config_t* penDM7 );
-NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask7(TJA1145FD_Data_Mask_7_Config_t enDM7 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getDataMask7(Byte CanTrcvIndex, TJA1145FD_Data_Mask_7_Config_t* penDM7 );
+NXP_UJA11XX_Error_Code_t TJA1145FD_setDataMask7(Byte CanTrcvIndex, TJA1145FD_Data_Mask_7_Config_t enDM7 );
 
-NXP_UJA11XX_Error_Code_t TJA1145FD_getIdentification(TJA1145FD_Device_ID_t* penIDS );
+NXP_UJA11XX_Error_Code_t TJA1145FD_getIdentification(Byte CanTrcvIndex, TJA1145FD_Device_ID_t* penIDS );
 
 
 //--------------------------------------------------------------------------------

@@ -1,0 +1,1 @@
+set CC=D:\ghs_compiler\GHS_MULTI_814\comp_202314\cxrh850.exe

@@ -26,7 +26,7 @@
 
 #include "NXP_TJA1145FD_Sim.h" 
 
-// Max. number of task in ApplTask queue
+// Max. number of task in TJA1145FD_ApplTask queue
 #define MAXTASKNO 256
 
 // Max. number of error entries in failure memory
@@ -79,6 +79,10 @@ typedef enum DeviceIdentification {
 	NXP_UNKNOWN = 0,              	                                                 
 } Device_t;
 
+// be care of INCLUDE_FROM_EXTERNAL_TJA1145FD_APPLICATION_SPECIFIC_FUNCTIONS
+#if defined(INCLUDE_FROM_EXTERNAL_TJA1145FD_APPLICATION_SPECIFIC_FUNCTIONS)
+#define StdReturn_t Std_ReturnType 
+#else
 // Supported standard return values
 typedef enum {
 	E_OK = 0,
@@ -87,9 +91,9 @@ typedef enum {
 
 /**** types related to PN Autosar R4.1 ****/
 typedef enum CanTrcv_TrcvWakeupReason {
-	CANTRCV_WU_BY_BUS = 0,
-	CANTRCV_WU_BY_PIN = 1,
-	CANTRCV_WU_ERROR = 2,
+	CANTRCV_WU_ERROR = 0,
+        CANTRCV_WU_BY_BUS = 1,
+	CANTRCV_WU_BY_PIN = 2,
 	CANTRCV_WU_INTERNALLY = 3,
 	CANTRCV_WU_NOT_SUPPORTED = 4,
 	CANTRCV_WU_POWER_ON = 5,
@@ -104,6 +108,7 @@ typedef enum CanTrcv_TrcvMode {
 	CANTRCV_TRCVMODE_SLEEP,
 	CANTRCV_TRCVMODE_STANDBY
 } CanTrcv_TrcvModeType;
+#endif
 
 typedef enum CanTrcv_PNActivation {
 	PN_DISABLED = 0,
@@ -112,140 +117,140 @@ typedef enum CanTrcv_PNActivation {
 
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-void SchedulerOnTimerOverflow(void); 
+void SchedulerOnTimerOverflow(Byte CanTrcvIndex); 
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-Device_t GetDeviceType(void);            
+Device_t GetDeviceType(Byte CanTrcvIndex);            
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-void InitApplication(void);
+void InitApplication(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t StartupOperation(void);
+StdReturn_t StartupOperation(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t InitTJA1145(void);
+StdReturn_t InitTJA1145(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t CheckFsmStatus(void); 
+StdReturn_t CheckFsmStatus(Byte CanTrcvIndex); 
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t ChangeToSleepOperation(void);
+StdReturn_t ChangeToSleepOperation(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t ChangeToStandbyOperation(void);
+StdReturn_t ChangeToStandbyOperation(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t ChangeToNormalOperation(void);        
+StdReturn_t ChangeToNormalOperation(Byte CanTrcvIndex);        
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t EventHandling(void);
+StdReturn_t EventHandling(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t RxdLowHandling(void);
+StdReturn_t RxdLowHandling(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-void PollTransceiverStatus(void);
+void PollTransceiverStatus(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-void PortSupervisor(void);
+void PortSupervisor(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-void WakeSupervisor(void);
+void WakeSupervisor(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_SetPnIdentifier(Word id, TJA1145FD_Identifier_Format_t idFormat);
+StdReturn_t TJA1145_SetPnIdentifier(Byte CanTrcvIndex, Word id, TJA1145FD_Identifier_Format_t idFormat);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_SetPnIdMask(Word mask, TJA1145FD_Identifier_Format_t idFormat);
+StdReturn_t TJA1145_SetPnIdMask(Byte CanTrcvIndex, Word mask, TJA1145FD_Identifier_Format_t idFormat);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t ConfigurePartialNetworking(void);
+StdReturn_t ConfigurePartialNetworking(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_SPIF_ServiceRoutine(void);
+StdReturn_t TJA1145_SPIF_ServiceRoutine(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_OTW_ServiceRoutine(void);
+StdReturn_t TJA1145_OTW_ServiceRoutine(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_PO_ServiceRoutine(void);
+StdReturn_t TJA1145_PO_ServiceRoutine(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_PNFDE_ServiceRoutine(void);
+StdReturn_t TJA1145_PNFDE_ServiceRoutine(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_CW_ServiceRoutine(void);
+StdReturn_t TJA1145_CW_ServiceRoutine(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_CF_ServiceRoutine(void);
+StdReturn_t TJA1145_CF_ServiceRoutine(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_CBS_ServiceRoutine(void);
+StdReturn_t TJA1145_CBS_ServiceRoutine(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_WPF_ServiceRoutine(void);
+StdReturn_t TJA1145_WPF_ServiceRoutine(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_WPR_ServiceRoutine(void);
+StdReturn_t TJA1145_WPR_ServiceRoutine(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-void RXDLow_ISR(void);
+void RXDLow_ISR(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-void Timer_ISR(void);
+void Timer_ISR(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-void StopCAN_TX(void);
+void StopCAN_TX(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-void ResumeCAN_TX(void);
+void ResumeCAN_TX(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-Byte EnterFlashOperation(void);
+Byte EnterFlashOperation(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-void AddToFailureMemory(FailureEntry_t data);          
+void AddToTJA1145FD_FailureMemory(Byte CanTrcvIndex, FailureEntry_t data);          
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-void InitScheduler(void);
+void InitScheduler(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-void AddTaskToScheduler(PendingTask_t);
+void AddTaskToScheduler(Byte CanTrcvIndex, PendingTask_t);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-PendingTask_t GetNextTask(void);
+PendingTask_t GetNextTask(Byte CanTrcvIndex);
 
 
 
 /**** APIs related to PN Autosar R4.1 ****/
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_GetWuReason(CanTrcv_TrcvWakeupReasonType* pReason);
+StdReturn_t TJA1145_GetWuReason(Byte CanTrcvIndex, CanTrcv_TrcvWakeupReasonType* pReason);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_ClearTrcvWufFlag(void);
+StdReturn_t TJA1145_ClearTrcvWufFlag(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_ReadTrcvTimeoutFlag(TJA1145FD_CAN_Bus_Active_t* pCbs);
+StdReturn_t TJA1145_ReadTrcvTimeoutFlag(Byte CanTrcvIndex, TJA1145FD_CAN_Bus_Active_t* pCbs);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_ClearTrcvTimeoutFlag(void);
+StdReturn_t TJA1145_ClearTrcvTimeoutFlag(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_ReadTrcvSilenceFlag(TJA1145FD_CAN_Bus_Status_t* pCbss);
+StdReturn_t TJA1145_ReadTrcvSilenceFlag(Byte CanTrcvIndex, TJA1145FD_CAN_Bus_Status_t* pCbss);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_CheckWakeFlag(void);
+StdReturn_t TJA1145_CheckWakeFlag(Byte CanTrcvIndex);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_SetPNActivationState(CanTrcv_PNActivationType actState);
+StdReturn_t TJA1145_SetPNActivationState(Byte CanTrcvIndex, CanTrcv_PNActivationType actState);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_SetOpMode(CanTrcv_TrcvModeType);
+StdReturn_t TJA1145_SetOpMode(Byte CanTrcvIndex, CanTrcv_TrcvModeType Mode);
 
 // see TJA1145_Application_Specific_Functions.c for documentation
-StdReturn_t TJA1145_GetOpMode(CanTrcv_TrcvModeType* pMode);
+StdReturn_t TJA1145_GetOpMode(Byte CanTrcvIndex, CanTrcv_TrcvModeType* pMode);
 
 #endif
 
